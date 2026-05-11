@@ -1,0 +1,34 @@
+Build me a super professional website for specialty-coffee. The brand is called Volta.
+
+Tone & design
+- premium, modern, confident. Think award-winning agency build, not a template.
+- Fully custom branding: cohesive palette (a tightly-restricted custom palette of 3-4 colours); typography is a custom display + body pairing chosen for the brand; generous whitespace; consistent voice across every section.
+- High-quality imagery: custom, high-quality imagery appropriate for the niche
+- The whole site should feel like it costs $20K to commission, not $200.
+
+Structure (high-converting)
+- Hero: massive headline, supporting subhead, one primary CTA, secondary text link. Imagery anchors the right side or fills behind.
+- Trust / social-proof band right under hero (logos, stat, or short testimonial line).
+- Three to four feature or benefit sections, each visually distinct — one alternating-image layout, one full-bleed feature, one card grid.
+- Testimonials section with at least three quotes and avatars.
+- Pricing or service tiers if appropriate for the niche.
+- FAQ with accordion behavior.
+- Footer with newsletter signup, navigation, social, and a final CTA repeat.
+
+Critical — animations (this site will be screen-recorded for short-form video)
+- Heavy emphasis on advanced, intentional scroll animations.
+- Hero text reveals on load with a staggered, slightly-delayed motion.
+- Parallax on the hero imagery.
+- Every major section fades + slides in as it enters the viewport, with a slight stagger between children.
+- Include at least one sticky scroll-scrub section that pins while the user scrolls and reveals content as they go (e.g. a feature with a 3-step explainer).
+- Smooth scroll behavior throughout.
+- Subtle hover micro-interactions on every interactive element: links, buttons, cards, images.
+- A horizontal-scroll section somewhere (logo wall, testimonials, lookbook, or work grid) that doubles as a scrub moment.
+- Every animation should feel cinematic and intentional — these screen recordings need to look impressive.
+
+Build hygiene
+- Use modern, accessible markup. Mobile-first. No layout shift on load.
+- Keep copy real, specific, and in-brand — no lorem ipsum, no "Build faster. Ship better." filler.
+- Use real-feeling placeholder content (named team members, real-sounding testimonials, plausible product names).
+
+Additional notes: Editorial magazine vibe meets industrial coffee roaster. Palette: deep espresso black (#0E0B08) base, bone white (#F4EFE6) text, electric tangerine accent (#FF5A1F), single oxidised copper detail. Typography: oversized serif display (think Editorial New / Times Now), all-caps mono labels, weighted tabular numerals for origin altitudes and roast dates. Grainy 35mm-style hero photography of beans, hands, water pour. Hero: huge serif headline 'BREW LIKE IT MATTERS' with the dot of an i animating into a coffee drip. Sticky scroll-scrub section that rotates through 4 single-origin beans (Ethiopia, Colombia, Sumatra, Guatemala) with altitude/tasting notes locking in as you scroll. Marquee of roast dates ticking across the page. Footer is a subscribe-to-the-roast block with a brutalist newsletter input. NO ROUNDED CORNERS ANYWHERE. Sharp 90-degree edges. Confident, slightly arrogant copy.
