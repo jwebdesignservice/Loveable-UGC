@@ -1,30 +1,10 @@
 {
   "reviewed_at": "2026-05-11T00:00:00Z",
   "results": [
-    {
-      "carousel": "sable-01-site-previews",
-      "verdict": "APPROVE",
-      "notes": "Hook is short, conversational, lowercase, natural Lovable mention. Site preview slides show real layout/typography/copy. Composition clean."
-    },
-    {
-      "carousel": "sable-02-one-prompt-site",
-      "verdict": "APPROVE",
-      "notes": "Hook 'told lovable: modern restaurant, candlelit, serif.' is punchy and credibly UGC. Slides well composed."
-    },
-    {
-      "carousel": "sable-03-site-previews",
-      "verdict": "APPROVE",
-      "notes": "Hook 'this restaurant site? lovable. not an agency.' is conversational and on-brand. Slides clean."
-    },
-    {
-      "carousel": "sable-04-one-prompt-site",
-      "verdict": "APPROVE",
-      "notes": "Hook '14 words and lovable plated the whole site.' is witty, restaurant-appropriate wordplay. Slides clean."
-    },
-    {
-      "carousel": "sable-revamp",
-      "verdict": "RETRY",
-      "notes": "Slide order is confusing: hook slide (1) shows the AFTER site, slide 2 jumps backward to BEFORE, then 3-6 are AFTER again. Reorder so BEFORE comes first after the hook, or have the hook slide stand alone without the polished preview underneath."
-    }
+    {"carousel": "sable-01-site-previews", "verdict": "APPROVE", "notes": "Hook clean ('lovable made my restaurant look like this.'), AFTER screenshot is tall multi-section crop showing 'A quiet kind of luxury' hero hanging into reserve/menu strip; slide 2 shows next section properly. Composition tight."},
+    {"carousel": "sable-02-one-prompt-site", "verdict": "APPROVE", "notes": "Hook is specific and UGC-credible ('told lovable: modern restaurant, candlelit, serif.'). Tall AFTER crop renders correctly. Page indicator 1/4 present."},
+    {"carousel": "sable-03-site-previews", "verdict": "APPROVE", "notes": "Strong differentiator hook ('this restaurant site? lovable. not an agency.'). AFTER preview composition correct, no clipping."},
+    {"carousel": "sable-04-one-prompt-site", "verdict": "APPROVE", "notes": "Hook concrete and conversational ('14 words and lovable plated the whole site.'). Tall AFTER crop fits canvas, no rendering bugs."},
+    {"carousel": "sable-revamp", "verdict": "APPROVE", "notes": "Slide order fixed: slide 1 BEFORE w/ hook overlay (generic 2018 navy/grey template with Welcome to Sable/Quality Service/Trusted Experts/Customer First — exactly the requested filler look), slides 2-5 AFTER sections in order, each labeled AFTER, advancing through hero -> story -> menu -> rooms/three-ways. Pagination 1/5 through 5/5 correct."}
   ]
 }

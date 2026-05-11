@@ -272,144 +272,181 @@ def _ugly_font(size: int, *, bold: bool = False, serif: bool = True
 
 def make_ugly_hero(path: Path, *, brand: str, tagline: str,
                   blurb: str) -> Path:
-    """A homepage that screams 2005. Yellow/teal bg, Times serif, blue
-    underlined heading, garish CTA, bordered tables."""
+    """A homepage that's just generic and boring — mid-2010s template feel.
+    Plain white, sans-serif, navy-blue nav, washed-out stock-photo hero,
+    centered headline, basic 3-up feature row. Functional, forgettable."""
     W, H = 1080, 1400
-    bg = Image.new("RGB", (W, H), (255, 255, 204))
+    bg = Image.new("RGB", (W, H), (255, 255, 255))
     d = ImageDraw.Draw(bg)
 
-    d.rectangle((0, 0, W, 80), fill=(0, 102, 204))
-    d.text((W // 2, 40), f"::: {brand.upper()} :::",
-           font=_ugly_font(26, bold=True), fill=(255, 255, 0), anchor="mm")
+    # Top bar — thin, plain
+    d.rectangle((0, 0, W, 80), fill=(255, 255, 255))
+    d.line((0, 80, W, 80), fill=(225, 228, 232), width=1)
+    d.text((40, 40), brand,
+           font=_font(26, bold=True), fill=(33, 53, 92), anchor="lm")
+    nav = ["Home", "About", "Services", "Pricing", "Contact"]
+    x = W - 40
+    for label in reversed(nav):
+        tw = d.textbbox((0, 0), label, font=_font(15))[2]
+        x -= tw + 32
+        d.text((x, 40), label, font=_font(15), fill=(85, 95, 110), anchor="lm")
 
-    d.rectangle((0, 80, W, 130), fill=(255, 153, 0))
-    nav = ["Home", "About Us", "Products", "Services", "Guestbook", "Contact"]
-    x = 30
-    for label in nav:
-        d.text((x, 95), label, font=_ugly_font(18, bold=True),
-               fill=(0, 0, 153))
-        x += 175
+    # Hero band — washed greyscale "stock photo" gradient
+    hero_top, hero_bot = 80, 700
+    hero = _grad((W, hero_bot - hero_top), (88, 100, 118), (140, 152, 168))
+    bg.paste(hero, (0, hero_top))
+    d = ImageDraw.Draw(bg)
+    # darken overlay strip behind text
+    overlay = Image.new("RGBA", (W, 240), (10, 14, 22, 90))
+    bg.paste(overlay, (0, hero_top + 200), overlay)
+    d = ImageDraw.Draw(bg)
 
-    d.text((W // 2, 200),
-           f"Welcome to {brand}!!!",
-           font=_ugly_font(56, bold=True), fill=(0, 0, 180), anchor="mm")
-    bb = d.textbbox((0, 0), f"Welcome to {brand}!!!",
-                    font=_ugly_font(56, bold=True))
-    underline_w = bb[2] - bb[0]
-    d.line((W // 2 - underline_w // 2, 232, W // 2 + underline_w // 2, 232),
-           fill=(0, 0, 180), width=3)
+    d.text((W // 2, hero_top + 280),
+           f"Welcome to {brand}",
+           font=_font(54, bold=True), fill=(255, 255, 255), anchor="mm")
+    d.text((W // 2, hero_top + 350), tagline,
+           font=_font(20), fill=(225, 230, 238), anchor="mm")
 
-    d.text((W // 2, 280), tagline, font=_ugly_font(22), fill=(102, 0, 0),
-           anchor="mm")
+    # Plain pill CTA
+    cta_y = hero_top + 410
+    cta_w, cta_h = 200, 52
+    cta_x = (W - cta_w) // 2
+    d.rounded_rectangle((cta_x, cta_y, cta_x + cta_w, cta_y + cta_h),
+                        radius=3, fill=(33, 110, 200))
+    d.text((cta_x + cta_w // 2, cta_y + cta_h // 2), "Learn More",
+           font=_font(16, bold=True), fill=(255, 255, 255), anchor="mm")
 
-    blurb_lines = _wrap(blurb, _ugly_font(20), W - 140, d)
+    # Intro paragraph
+    blurb_y = 740
+    blurb_lines = _wrap(blurb, _font(17), int(W * 0.62), d)
     for i, line in enumerate(blurb_lines):
-        d.text((W // 2, 340 + i * 30), line, font=_ugly_font(20),
-               fill=(0, 0, 0), anchor="mm")
+        d.text((W // 2, blurb_y + i * 26), line,
+               font=_font(17), fill=(85, 95, 110), anchor="mm")
 
-    table_y = 340 + len(blurb_lines) * 30 + 50
-    table_h = 320
-    d.rectangle((40, table_y, W - 40, table_y + table_h),
-                outline=(0, 0, 0), width=3, fill=(255, 255, 255))
-    d.line((W // 2, table_y, W // 2, table_y + table_h),
-           fill=(0, 0, 0), width=3)
-    d.line((40, table_y + 60, W - 40, table_y + 60),
-           fill=(0, 0, 0), width=3)
-    d.rectangle((40, table_y, W - 40, table_y + 60), fill=(204, 204, 204))
-    d.text((W * 0.27, table_y + 30), "OUR PRODUCTS",
-           font=_ugly_font(22, bold=True), fill=(0, 0, 0), anchor="mm")
-    d.text((W * 0.73, table_y + 30), "CONTACT INFO",
-           font=_ugly_font(22, bold=True), fill=(0, 0, 0), anchor="mm")
-
-    products = ["• Item One", "• Item Two", "• Item Three", "• Special!"]
-    for i, p in enumerate(products):
-        d.text((80, table_y + 90 + i * 40), p, font=_ugly_font(20),
-               fill=(0, 0, 180))
-    info = [
-        f"Phone: 555-{brand[:3].upper()}-2020",
-        f"Email: info@{brand.lower()}.com",
-        "Hours: Mon-Fri 9-5",
-        "Est. 1998",
+    # Three-up feature grid — plain cards with rounded greyscale icons
+    feat_y = blurb_y + len(blurb_lines) * 26 + 50
+    titles = [
+        ("Quality Service", "Committed to excellence in every interaction."),
+        ("Trusted Experts", "Decades of combined industry experience."),
+        ("Customer First", "Your satisfaction is our top priority."),
     ]
-    for i, line in enumerate(info):
-        d.text((W // 2 + 40, table_y + 90 + i * 40), line,
-               font=_ugly_font(18), fill=(0, 0, 0))
+    col_w = (W - 80 - 40) // 3
+    for i, (t, s) in enumerate(titles):
+        cx = 40 + i * (col_w + 20)
+        # icon disk
+        d.ellipse((cx + col_w // 2 - 28, feat_y, cx + col_w // 2 + 28,
+                   feat_y + 56), fill=(238, 242, 246))
+        d.ellipse((cx + col_w // 2 - 10, feat_y + 18,
+                   cx + col_w // 2 + 10, feat_y + 38),
+                  fill=(150, 165, 185))
+        d.text((cx + col_w // 2, feat_y + 86), t,
+               font=_font(18, bold=True), fill=(45, 55, 70), anchor="mm")
+        for j, line in enumerate(_wrap(s, _font(14), col_w - 20, d)):
+            d.text((cx + col_w // 2, feat_y + 116 + j * 20), line,
+                   font=_font(14), fill=(120, 130, 145), anchor="mm")
 
-    btn_y = table_y + table_h + 60
-    btn_w, btn_h = 360, 80
-    btn_x = (W - btn_w) // 2
-    d.rectangle((btn_x, btn_y, btn_x + btn_w, btn_y + btn_h),
-                fill=(255, 0, 0), outline=(0, 0, 0), width=4)
-    d.rectangle((btn_x + 4, btn_y + 4, btn_x + btn_w - 4, btn_y + btn_h - 4),
-                outline=(255, 255, 0), width=2)
-    d.text((btn_x + btn_w // 2, btn_y + btn_h // 2),
-           ">>> CLICK HERE NOW <<<",
-           font=_ugly_font(24, bold=True), fill=(255, 255, 0), anchor="mm")
-
+    # Footer bar — plain dark navy
     foot_y = H - 80
-    d.rectangle((0, foot_y, W, H), fill=(0, 102, 204))
-    d.text((W // 2, foot_y + 25),
-           f"© 1998-2008 {brand}. All rights reserved.",
-           font=_ugly_font(16), fill=(255, 255, 255), anchor="mm")
-    d.text((W // 2, foot_y + 52),
-           "Best viewed in Internet Explorer 6 at 800x600",
-           font=_ugly_font(14), fill=(255, 255, 0), anchor="mm")
+    d.rectangle((0, foot_y, W, H), fill=(33, 45, 65))
+    d.text((40, foot_y + 30), brand,
+           font=_font(16, bold=True), fill=(255, 255, 255))
+    d.text((40, foot_y + 54), f"© 2018 {brand}. All rights reserved.",
+           font=_font(12), fill=(160, 170, 185))
+    foot_links = ["Privacy", "Terms", "Sitemap"]
+    fx = W - 40
+    for label in reversed(foot_links):
+        tw = d.textbbox((0, 0), label, font=_font(13))[2]
+        fx -= tw + 24
+        d.text((fx, foot_y + 40), label, font=_font(13),
+               fill=(190, 200, 215), anchor="lm")
 
     bg.save(path, optimize=True)
     return path
 
 
 def make_ugly_section(path: Path, *, brand: str) -> Path:
-    """A second slide of the bad site: animated-feel testimonial / sidebar."""
+    """Second BEFORE slide: a plain about/testimonials section.
+    Generic stock-template feel — light grey blocks, lorem-ish copy."""
     W, H = 1080, 1400
-    bg = Image.new("RGB", (W, H), (204, 255, 204))
+    bg = Image.new("RGB", (W, H), (255, 255, 255))
     d = ImageDraw.Draw(bg)
 
-    d.rectangle((0, 0, W, 80), fill=(153, 0, 153))
-    d.text((W // 2, 40), "*** WHAT OUR CUSTOMERS SAY ***",
-           font=_ugly_font(26, bold=True), fill=(255, 255, 0), anchor="mm")
+    # Section title
+    d.text((W // 2, 100), "About Us",
+           font=_font(36, bold=True), fill=(45, 55, 70), anchor="mm")
+    d.text((W // 2, 144), "Get to know who we are and what we stand for.",
+           font=_font(16), fill=(120, 130, 145), anchor="mm")
 
+    # Two-col split: greyscale image block + copy
+    split_y = 200
+    img_w = (W - 80 - 40) // 2
+    d.rectangle((40, split_y, 40 + img_w, split_y + 380),
+                fill=(235, 240, 246))
+    # tiny "image" mountains
+    d.polygon([(70, split_y + 320), (160, split_y + 200),
+               (240, split_y + 280), (340, split_y + 160),
+               (40 + img_w - 20, split_y + 310),
+               (40 + img_w - 20, split_y + 380),
+               (70, split_y + 380)], fill=(190, 200, 215))
+    d.ellipse((40 + img_w - 120, split_y + 60,
+               40 + img_w - 60, split_y + 120), fill=(220, 225, 232))
+
+    copy_x = 40 + img_w + 40
+    d.text((copy_x, split_y + 20), "Our Story",
+           font=_font(22, bold=True), fill=(45, 55, 70))
+    body = (
+        f"At {brand}, we believe in delivering quality and value to every "
+        f"customer. Founded with a simple goal — to make great service "
+        f"accessible — we've been proudly serving our community for over "
+        f"a decade. Our dedicated team works hard every day to exceed your "
+        f"expectations."
+    )
+    for i, line in enumerate(_wrap(body, _font(15), W - copy_x - 60, d)):
+        d.text((copy_x, split_y + 70 + i * 24), line,
+               font=_font(15), fill=(95, 105, 120))
+
+    btn_y2 = split_y + 320
+    d.rounded_rectangle((copy_x, btn_y2, copy_x + 140, btn_y2 + 40),
+                        radius=3, fill=(33, 110, 200))
+    d.text((copy_x + 70, btn_y2 + 20), "Read More",
+           font=_font(14, bold=True), fill=(255, 255, 255), anchor="mm")
+
+    # Testimonial strip — light grey background, two plain cards
+    ts_y = 640
+    d.rectangle((0, ts_y, W, ts_y + 480), fill=(247, 249, 252))
+    d.text((W // 2, ts_y + 50), "What Our Clients Say",
+           font=_font(26, bold=True), fill=(45, 55, 70), anchor="mm")
     quotes = [
-        ('"Best service ever! 5 stars!!!"', "— John D., Verified Buyer"),
-        ('"Would buy again and again!!!"', "— Sarah M., New York"),
-        ('"This product changed my life!"', "— Mike T., California"),
+        ('"Great service and friendly staff. Would recommend."',
+         "John Smith"),
+        ('"Professional, on time, and exactly what we needed."',
+         "Sarah Johnson"),
     ]
-    y = 140
-    for q, attr in quotes:
-        d.rectangle((40, y, W - 40, y + 180), fill=(255, 255, 255),
-                    outline=(0, 0, 0), width=2)
-        for j in range(5):
-            d.text((60 + j * 32, y + 24), "★",
-                   font=_ugly_font(36, bold=True), fill=(255, 200, 0))
-        d.text((60, y + 80), q, font=_ugly_font(22, serif=True),
-               fill=(0, 0, 102))
-        d.text((60, y + 130), attr, font=_ugly_font(16),
-               fill=(80, 80, 80))
-        y += 210
+    card_w = (W - 80 - 30) // 2
+    for i, (q, n) in enumerate(quotes):
+        cx = 40 + i * (card_w + 30)
+        cy = ts_y + 110
+        d.rounded_rectangle((cx, cy, cx + card_w, cy + 280),
+                            radius=4, fill=(255, 255, 255))
+        d.line((cx, cy, cx + card_w, cy), fill=(230, 234, 240), width=1)
+        for s in range(5):
+            d.text((cx + 24 + s * 22, cy + 28), "★",
+                   font=_font(18), fill=(255, 195, 60))
+        for j, line in enumerate(_wrap(q, _font(15), card_w - 48, d)):
+            d.text((cx + 24, cy + 80 + j * 24), line,
+                   font=_font(15), fill=(75, 85, 100))
+        d.line((cx + 24, cy + 210, cx + 80, cy + 210),
+               fill=(200, 208, 220), width=2)
+        d.text((cx + 24, cy + 230), n,
+               font=_font(13, bold=True), fill=(95, 105, 120))
 
-    nl_y = y + 30
-    d.rectangle((40, nl_y, W - 40, nl_y + 240), fill=(255, 255, 0),
-                outline=(255, 0, 0), width=4)
-    d.text((W // 2, nl_y + 40), "!! SIGN UP FOR OUR NEWSLETTER !!",
-           font=_ugly_font(24, bold=True), fill=(204, 0, 0), anchor="mm")
-    d.text((W // 2, nl_y + 80), "Get 10% off your first order!",
-           font=_ugly_font(18), fill=(0, 0, 0), anchor="mm")
-    d.rectangle((100, nl_y + 130, 700, nl_y + 180),
-                fill=(255, 255, 255), outline=(0, 0, 0), width=2)
-    d.text((116, nl_y + 145), "your.email@example.com",
-           font=_ugly_font(18), fill=(150, 150, 150))
-    d.rectangle((720, nl_y + 130, 980, nl_y + 180),
-                fill=(0, 153, 0), outline=(0, 0, 0), width=2)
-    d.text((850, nl_y + 155), "SUBSCRIBE!",
-           font=_ugly_font(20, bold=True), fill=(255, 255, 0), anchor="mm")
-
+    # Footer
     foot_y = H - 80
-    d.rectangle((0, foot_y, W, H), fill=(153, 0, 153))
-    d.text((W // 2, foot_y + 25),
-           f"Visit our sister sites: {brand}News.com | {brand}Blog.com",
-           font=_ugly_font(15), fill=(255, 255, 255), anchor="mm")
-    d.text((W // 2, foot_y + 52), "Last updated: April 14, 2008",
-           font=_ugly_font(14), fill=(255, 255, 0), anchor="mm")
+    d.rectangle((0, foot_y, W, H), fill=(33, 45, 65))
+    d.text((40, foot_y + 30), brand,
+           font=_font(16, bold=True), fill=(255, 255, 255))
+    d.text((40, foot_y + 54), f"© 2018 {brand}. All rights reserved.",
+           font=_font(12), fill=(160, 170, 185))
 
     bg.save(path, optimize=True)
     return path

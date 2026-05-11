@@ -39,25 +39,75 @@ def _wrap(text: str, fnt: ImageFont.FreeTypeFont, max_w: int,
 def _paste_centered(canvas: Image.Image, screenshot: Image.Image,
                     box: tuple[int, int, int, int],
                     radius: int = 22) -> None:
-    """Fit a screenshot inside box, rounded corners + soft shadow."""
+    """Place a screenshot inside box, rounded corners + soft shadow.
+
+    Behavior:
+    - If the screenshot, scaled to fit the box width, is taller than the
+      box, we fill the box width and anchor the screenshot to the top of
+      the box, letting the bottom extend past the canvas edge ("hang off
+      the bottom"). The bottom corners are not rounded since they sit
+      outside the visible canvas.
+    - Otherwise we preserve the original fit-inside-box behavior.
+    """
     x1, y1, x2, y2 = box
     max_w = x2 - x1
     max_h = y2 - y1
+    canvas_h = canvas.size[1]
 
     sw, sh = screenshot.size
+    # Aspect-driven choice: when the source is markedly taller than the
+    # box (more than 25% taller after fitting by width) we treat it as a
+    # long-screenshot and hang it off the bottom.
+    width_scale = max_w / sw
+    fit_h = int(sh * width_scale)
+    hang = fit_h > max_h * 1.25
+
+    if hang:
+        new_w = max_w
+        new_h = fit_h
+        resized = screenshot.resize((new_w, new_h), Image.LANCZOS)
+
+        cx = x1
+        cy = y1
+        # how far the image extends below the canvas — used to skip
+        # the bottom-edge rounded corners (they'd be off-screen anyway)
+        visible_h = min(new_h, canvas_h - cy)
+
+        mask = Image.new("L", (new_w, new_h), 0)
+        md = ImageDraw.Draw(mask)
+        md.rounded_rectangle((0, 0, new_w, new_h), radius=radius, fill=255)
+        # Square off any portion below the canvas — keeps a clean cut at
+        # the canvas bottom rather than an awkward rounded corner.
+        if visible_h < new_h - radius:
+            md.rectangle((0, visible_h - radius, new_w, new_h), fill=255)
+
+        rounded = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 0))
+        rounded.paste(resized.convert("RGBA"), (0, 0), mask)
+
+        # Soft shadow only around the visible portion
+        sh_h = max(80, visible_h + 80)
+        shadow = Image.new("RGBA", (new_w + 80, sh_h), (0, 0, 0, 0))
+        ImageDraw.Draw(shadow).rounded_rectangle(
+            (40, 40, 40 + new_w, 40 + visible_h),
+            radius=radius, fill=(0, 0, 0, 70),
+        )
+        shadow = shadow.filter(ImageFilter.GaussianBlur(18))
+        canvas.paste(shadow, (cx - 40, cy - 32), shadow)
+        canvas.paste(rounded, (cx, cy), rounded)
+        return
+
+    # Default: fit inside the box (preserve aspect, center).
     scale = min(max_w / sw, max_h / sh)
     new_w = int(sw * scale)
     new_h = int(sh * scale)
     resized = screenshot.resize((new_w, new_h), Image.LANCZOS)
 
-    # rounded mask
     mask = Image.new("L", (new_w, new_h), 0)
     ImageDraw.Draw(mask).rounded_rectangle((0, 0, new_w, new_h),
                                            radius=radius, fill=255)
     rounded = Image.new("RGBA", (new_w, new_h), (0, 0, 0, 0))
     rounded.paste(resized.convert("RGBA"), (0, 0), mask)
 
-    # shadow
     shadow = Image.new("RGBA", (new_w + 80, new_h + 80), (0, 0, 0, 0))
     ImageDraw.Draw(shadow).rounded_rectangle(
         (40, 40, 40 + new_w, 40 + new_h), radius=radius, fill=(0, 0, 0, 70)
@@ -66,7 +116,6 @@ def _paste_centered(canvas: Image.Image, screenshot: Image.Image,
 
     cx = x1 + (max_w - new_w) // 2
     cy = y1 + (max_h - new_h) // 2
-
     canvas.paste(shadow, (cx - 40, cy - 32), shadow)
     canvas.paste(rounded, (cx, cy), rounded)
 
@@ -224,16 +273,16 @@ def render_comparison_carousel(*, hook: str, before: Path,
                                out_dir: Path,
                                sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1)
                                ) -> dict:
-    """3+ slide carousel: 1) hook + after hero, 2) BEFORE, 3..N) AFTER sections.
+    """N-slide carousel: 1) hook overlaid on BEFORE, 2..N) AFTER sections.
 
-    Layout reads: 'rebuilt this' → see the bad one → see the good one.
+    Reading order: hook + bad site → reveal of the new site, section by
+    section. Slide 1 must show the BEFORE so the AFTER isn't spoiled.
     """
     out_dir.mkdir(parents=True, exist_ok=True)
     if not after_screenshots:
         raise ValueError("Need at least one after screenshot")
 
     slides: list[tuple[Path, str | None, str | None]] = []
-    slides.append((after_screenshots[0], None, None))
     slides.append((before, "BEFORE", "before"))
     for s in after_screenshots:
         slides.append((s, "AFTER", "after"))
