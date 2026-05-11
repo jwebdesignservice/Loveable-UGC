@@ -19,6 +19,7 @@ from . import content as content_mod
 from . import design as design_mod
 from . import lovable as lovable_mod
 from . import niches as niches_mod
+from . import plan as plan_mod
 from . import prompts as prompts_mod
 from . import screenshots as screenshots_mod
 from . import state as state_mod
@@ -275,6 +276,13 @@ def _used_slugs() -> list[str]:
     return [p.name for p in SITES_DIR.iterdir()
             if p.is_dir() and p.name not in {".gitkeep"}
             and not p.name.endswith("-before")]
+
+
+@cli.command()
+def plan() -> None:
+    """Print today's action plan as JSON for the orchestrator to consume."""
+    p = plan_mod.build_plan()
+    click.echo(plan_mod.plan_to_json(p))
 
 
 @cli.command("auto")
