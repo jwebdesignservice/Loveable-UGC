@@ -171,3 +171,86 @@ def render_carousel(*, hook: str, screenshots: list[Path], out_dir: Path,
         written[f"{W}x{H}"] = paths
 
     return written
+
+
+# ---------------------------------------------------------- comparison render
+
+
+def _draw_corner_tag(canvas: Image.Image, label: str, *,
+                     bg: tuple[int, int, int],
+                     fg: tuple[int, int, int]) -> None:
+    """Small label in the top-left corner of a slide (BEFORE / AFTER)."""
+    W = canvas.size[0]
+    d = ImageDraw.Draw(canvas)
+    fnt = _font(int(W * 0.035), bold=True)
+    pad_x = int(W * 0.035)
+    pad_y = int(W * 0.018)
+    tb = d.textbbox((0, 0), label, font=fnt)
+    tw = tb[2] - tb[0]
+    th = tb[3] - tb[1]
+    x = int(W * 0.06)
+    y = int(W * 0.06)
+    d.rounded_rectangle(
+        (x, y, x + tw + pad_x * 2, y + th + pad_y * 2),
+        radius=int((th + pad_y * 2) * 0.3), fill=bg,
+    )
+    d.text((x + pad_x, y + pad_y - 2), label, font=fnt, fill=fg)
+
+
+def render_comparison_slide(size: tuple[int, int], screenshot_path: Path,
+                            tag: str | None, tag_color: str | None,
+                            slide_num: str | None,
+                            hook: str | None) -> Image.Image:
+    """A slide for BEFORE/AFTER style carousels.
+
+    `tag` shows in the top-left as a small label. Hook (if given) sits in
+    its usual pill at the top — only slide 1 of the carousel has it.
+    """
+    W, H = size
+    img = render_slide(size, screenshot_path, hook, slide_num)
+    if tag:
+        palette = {
+            "before": ((180, 35, 35), (255, 255, 255)),
+            "after": ((40, 80, 50), (255, 255, 255)),
+            "neutral": ((17, 17, 17), (255, 255, 255)),
+        }
+        bg, fg = palette.get(tag_color or "neutral", palette["neutral"])
+        _draw_corner_tag(img, tag, bg=bg, fg=fg)
+    return img
+
+
+def render_comparison_carousel(*, hook: str, before: Path,
+                               after_screenshots: list[Path],
+                               out_dir: Path,
+                               sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1)
+                               ) -> dict:
+    """3+ slide carousel: 1) hook + after hero, 2) BEFORE, 3..N) AFTER sections.
+
+    Layout reads: 'rebuilt this' → see the bad one → see the good one.
+    """
+    out_dir.mkdir(parents=True, exist_ok=True)
+    if not after_screenshots:
+        raise ValueError("Need at least one after screenshot")
+
+    slides: list[tuple[Path, str | None, str | None]] = []
+    slides.append((after_screenshots[0], None, None))
+    slides.append((before, "BEFORE", "before"))
+    for s in after_screenshots:
+        slides.append((s, "AFTER", "after"))
+
+    total = len(slides)
+    written: dict[str, list[str]] = {}
+    for (W, H) in sizes:
+        ratio_dir = out_dir / f"{W}x{H}"
+        ratio_dir.mkdir(exist_ok=True)
+        paths: list[str] = []
+        for i, (shot, tag, color) in enumerate(slides, start=1):
+            slide_hook = hook if i == 1 else None
+            num = f"{i} / {total}"
+            img = render_comparison_slide((W, H), shot, tag, color, num,
+                                          slide_hook)
+            p = ratio_dir / f"slide-{i:02d}.png"
+            img.save(p, optimize=True)
+            paths.append(str(p))
+        written[f"{W}x{H}"] = paths
+    return written

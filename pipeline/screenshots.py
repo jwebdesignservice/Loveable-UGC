@@ -252,3 +252,181 @@ def make_placeholder_site(out_dir: Path, brand: str = "Auréa") -> list[Path]:
         make_footer(out_dir / "04-footer.png", brand=brand),
     ]
     return paths
+
+
+# ---------------------------------------------------------------- ugly sites
+
+
+FONT_SERIF = "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"
+FONT_SERIF_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"
+
+
+def _ugly_font(size: int, *, bold: bool = False, serif: bool = True
+               ) -> ImageFont.FreeTypeFont:
+    if serif and bold:
+        return ImageFont.truetype(FONT_SERIF_BOLD, size)
+    if serif:
+        return ImageFont.truetype(FONT_SERIF, size)
+    return _font(size, bold=bold)
+
+
+def make_ugly_hero(path: Path, *, brand: str, tagline: str,
+                  blurb: str) -> Path:
+    """A homepage that screams 2005. Yellow/teal bg, Times serif, blue
+    underlined heading, garish CTA, bordered tables."""
+    W, H = 1080, 1400
+    bg = Image.new("RGB", (W, H), (255, 255, 204))
+    d = ImageDraw.Draw(bg)
+
+    d.rectangle((0, 0, W, 80), fill=(0, 102, 204))
+    d.text((W // 2, 40), f"::: {brand.upper()} :::",
+           font=_ugly_font(26, bold=True), fill=(255, 255, 0), anchor="mm")
+
+    d.rectangle((0, 80, W, 130), fill=(255, 153, 0))
+    nav = ["Home", "About Us", "Products", "Services", "Guestbook", "Contact"]
+    x = 30
+    for label in nav:
+        d.text((x, 95), label, font=_ugly_font(18, bold=True),
+               fill=(0, 0, 153))
+        x += 175
+
+    d.text((W // 2, 200),
+           f"Welcome to {brand}!!!",
+           font=_ugly_font(56, bold=True), fill=(0, 0, 180), anchor="mm")
+    bb = d.textbbox((0, 0), f"Welcome to {brand}!!!",
+                    font=_ugly_font(56, bold=True))
+    underline_w = bb[2] - bb[0]
+    d.line((W // 2 - underline_w // 2, 232, W // 2 + underline_w // 2, 232),
+           fill=(0, 0, 180), width=3)
+
+    d.text((W // 2, 280), tagline, font=_ugly_font(22), fill=(102, 0, 0),
+           anchor="mm")
+
+    blurb_lines = _wrap(blurb, _ugly_font(20), W - 140, d)
+    for i, line in enumerate(blurb_lines):
+        d.text((W // 2, 340 + i * 30), line, font=_ugly_font(20),
+               fill=(0, 0, 0), anchor="mm")
+
+    table_y = 340 + len(blurb_lines) * 30 + 50
+    table_h = 320
+    d.rectangle((40, table_y, W - 40, table_y + table_h),
+                outline=(0, 0, 0), width=3, fill=(255, 255, 255))
+    d.line((W // 2, table_y, W // 2, table_y + table_h),
+           fill=(0, 0, 0), width=3)
+    d.line((40, table_y + 60, W - 40, table_y + 60),
+           fill=(0, 0, 0), width=3)
+    d.rectangle((40, table_y, W - 40, table_y + 60), fill=(204, 204, 204))
+    d.text((W * 0.27, table_y + 30), "OUR PRODUCTS",
+           font=_ugly_font(22, bold=True), fill=(0, 0, 0), anchor="mm")
+    d.text((W * 0.73, table_y + 30), "CONTACT INFO",
+           font=_ugly_font(22, bold=True), fill=(0, 0, 0), anchor="mm")
+
+    products = ["• Item One", "• Item Two", "• Item Three", "• Special!"]
+    for i, p in enumerate(products):
+        d.text((80, table_y + 90 + i * 40), p, font=_ugly_font(20),
+               fill=(0, 0, 180))
+    info = [
+        f"Phone: 555-{brand[:3].upper()}-2020",
+        f"Email: info@{brand.lower()}.com",
+        "Hours: Mon-Fri 9-5",
+        "Est. 1998",
+    ]
+    for i, line in enumerate(info):
+        d.text((W // 2 + 40, table_y + 90 + i * 40), line,
+               font=_ugly_font(18), fill=(0, 0, 0))
+
+    btn_y = table_y + table_h + 60
+    btn_w, btn_h = 360, 80
+    btn_x = (W - btn_w) // 2
+    d.rectangle((btn_x, btn_y, btn_x + btn_w, btn_y + btn_h),
+                fill=(255, 0, 0), outline=(0, 0, 0), width=4)
+    d.rectangle((btn_x + 4, btn_y + 4, btn_x + btn_w - 4, btn_y + btn_h - 4),
+                outline=(255, 255, 0), width=2)
+    d.text((btn_x + btn_w // 2, btn_y + btn_h // 2),
+           ">>> CLICK HERE NOW <<<",
+           font=_ugly_font(24, bold=True), fill=(255, 255, 0), anchor="mm")
+
+    foot_y = H - 80
+    d.rectangle((0, foot_y, W, H), fill=(0, 102, 204))
+    d.text((W // 2, foot_y + 25),
+           f"© 1998-2008 {brand}. All rights reserved.",
+           font=_ugly_font(16), fill=(255, 255, 255), anchor="mm")
+    d.text((W // 2, foot_y + 52),
+           "Best viewed in Internet Explorer 6 at 800x600",
+           font=_ugly_font(14), fill=(255, 255, 0), anchor="mm")
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_ugly_section(path: Path, *, brand: str) -> Path:
+    """A second slide of the bad site: animated-feel testimonial / sidebar."""
+    W, H = 1080, 1400
+    bg = Image.new("RGB", (W, H), (204, 255, 204))
+    d = ImageDraw.Draw(bg)
+
+    d.rectangle((0, 0, W, 80), fill=(153, 0, 153))
+    d.text((W // 2, 40), "*** WHAT OUR CUSTOMERS SAY ***",
+           font=_ugly_font(26, bold=True), fill=(255, 255, 0), anchor="mm")
+
+    quotes = [
+        ('"Best service ever! 5 stars!!!"', "— John D., Verified Buyer"),
+        ('"Would buy again and again!!!"', "— Sarah M., New York"),
+        ('"This product changed my life!"', "— Mike T., California"),
+    ]
+    y = 140
+    for q, attr in quotes:
+        d.rectangle((40, y, W - 40, y + 180), fill=(255, 255, 255),
+                    outline=(0, 0, 0), width=2)
+        for j in range(5):
+            d.text((60 + j * 32, y + 24), "★",
+                   font=_ugly_font(36, bold=True), fill=(255, 200, 0))
+        d.text((60, y + 80), q, font=_ugly_font(22, serif=True),
+               fill=(0, 0, 102))
+        d.text((60, y + 130), attr, font=_ugly_font(16),
+               fill=(80, 80, 80))
+        y += 210
+
+    nl_y = y + 30
+    d.rectangle((40, nl_y, W - 40, nl_y + 240), fill=(255, 255, 0),
+                outline=(255, 0, 0), width=4)
+    d.text((W // 2, nl_y + 40), "!! SIGN UP FOR OUR NEWSLETTER !!",
+           font=_ugly_font(24, bold=True), fill=(204, 0, 0), anchor="mm")
+    d.text((W // 2, nl_y + 80), "Get 10% off your first order!",
+           font=_ugly_font(18), fill=(0, 0, 0), anchor="mm")
+    d.rectangle((100, nl_y + 130, 700, nl_y + 180),
+                fill=(255, 255, 255), outline=(0, 0, 0), width=2)
+    d.text((116, nl_y + 145), "your.email@example.com",
+           font=_ugly_font(18), fill=(150, 150, 150))
+    d.rectangle((720, nl_y + 130, 980, nl_y + 180),
+                fill=(0, 153, 0), outline=(0, 0, 0), width=2)
+    d.text((850, nl_y + 155), "SUBSCRIBE!",
+           font=_ugly_font(20, bold=True), fill=(255, 255, 0), anchor="mm")
+
+    foot_y = H - 80
+    d.rectangle((0, foot_y, W, H), fill=(153, 0, 153))
+    d.text((W // 2, foot_y + 25),
+           f"Visit our sister sites: {brand}News.com | {brand}Blog.com",
+           font=_ugly_font(15), fill=(255, 255, 255), anchor="mm")
+    d.text((W // 2, foot_y + 52), "Last updated: April 14, 2008",
+           font=_ugly_font(14), fill=(255, 255, 0), anchor="mm")
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_ugly_site(out_dir: Path, *, brand: str,
+                  tagline: str = "Your one-stop online destination.",
+                  blurb: str = ("We are a family owned business with years "
+                                "of experience serving customers worldwide. "
+                                "Click below to see our amazing products!"),
+                  ) -> list[Path]:
+    """Generate a deliberately bad-looking site for BEFORE slots."""
+    out_dir.mkdir(parents=True, exist_ok=True)
+    paths = [
+        make_ugly_hero(out_dir / "before-01-home.png", brand=brand,
+                       tagline=tagline, blurb=blurb),
+        make_ugly_section(out_dir / "before-02-testimonials.png",
+                          brand=brand),
+    ]
+    return paths

@@ -21,7 +21,7 @@ from . import screenshots as screenshots_mod
 from . import state as state_mod
 from .config import (CAROUSELS_DIR, SITES_DIR, SIZE_1X1, SIZE_9X16,
                      ensure_dirs)
-from .renderer import render_carousel
+from .renderer import render_carousel, render_comparison_carousel
 
 load_dotenv()
 
@@ -146,6 +146,82 @@ def demo(site: str, brand: str, n: int) -> None:
         ))
     state_mod.save(state)
     click.echo(f"\nDone. {len(scripts)} carousels in {CAROUSELS_DIR}.")
+
+
+@cli.command("ugly-site")
+@click.option("--site", required=True, help="Site slug under data/sites/")
+@click.option("--brand", required=True, help="Brand name to render.")
+@click.option("--tagline", default="Your one-stop online destination.")
+def ugly_site(site: str, brand: str, tagline: str) -> None:
+    """Write a deliberately bad-looking BEFORE site (90s/2000s vibe)."""
+    ensure_dirs()
+    out = SITES_DIR / site
+    paths = screenshots_mod.make_ugly_site(out, brand=brand, tagline=tagline)
+    click.echo(f"Wrote {len(paths)} ugly screenshots to {out}")
+    for p in paths:
+        click.echo(f"  {p}")
+
+
+@cli.command("comparison-demo")
+@click.option("--brand", default="Auréa")
+@click.option("--hook", default="rebuilt this in lovable. one prompt.")
+def comparison_demo(brand: str, hook: str) -> None:
+    """End-to-end demo of a BEFORE/AFTER comparison carousel."""
+    ensure_dirs()
+
+    after_dir = SITES_DIR / f"{brand.lower().replace(' ', '-')}-after"
+    if not list(after_dir.glob("*.png")):
+        click.echo(f"Generating polished AFTER site for {brand}...")
+        screenshots_mod.make_placeholder_site(after_dir, brand=brand)
+
+    before_dir = SITES_DIR / f"{brand.lower().replace(' ', '-')}-before"
+    if not list(before_dir.glob("*.png")):
+        click.echo(f"Generating dated BEFORE site for {brand}...")
+        screenshots_mod.make_ugly_site(before_dir, brand=brand)
+
+    before_shot = sorted(before_dir.glob("*.png"))[0]
+    after_shots = sorted(after_dir.glob("*.png"))
+    out_dir = CAROUSELS_DIR / f"{brand.lower().replace(' ', '-')}-revamp-demo"
+
+    click.echo(f"\nRendering BEFORE/AFTER carousel: {hook}")
+    written = render_comparison_carousel(
+        hook=hook, before=before_shot,
+        after_screenshots=after_shots, out_dir=out_dir,
+    )
+    click.echo(f"  -> {out_dir}")
+    for ratio, paths in written.items():
+        click.echo(f"     {ratio}: {len(paths)} slides")
+
+
+@cli.command("render-comparison")
+@click.option("--before-site", required=True,
+              help="Slug under data/sites/ for the BEFORE site.")
+@click.option("--after-site", required=True,
+              help="Slug under data/sites/ for the AFTER site.")
+@click.option("--hook", required=True)
+@click.option("--carousel", "carousel_name", required=True)
+def render_comparison_cmd(before_site: str, after_site: str, hook: str,
+                          carousel_name: str) -> None:
+    """Render a BEFORE/AFTER carousel from two existing site folders."""
+    before_dir = SITES_DIR / before_site
+    after_dir = SITES_DIR / after_site
+    if not before_dir.exists():
+        raise click.ClickException(f"No site at {before_dir}")
+    if not after_dir.exists():
+        raise click.ClickException(f"No site at {after_dir}")
+    before_shots = sorted(before_dir.glob("*.png"))
+    after_shots = sorted(after_dir.glob("*.png"))
+    if not before_shots or not after_shots:
+        raise click.ClickException("Both sites need at least one screenshot")
+    out = CAROUSELS_DIR / carousel_name
+    written = render_comparison_carousel(
+        hook=hook, before=before_shots[0],
+        after_screenshots=after_shots, out_dir=out,
+    )
+    for ratio, paths in written.items():
+        click.echo(f"{ratio}:")
+        for p in paths:
+            click.echo(f"  {p}")
 
 
 @cli.group()
