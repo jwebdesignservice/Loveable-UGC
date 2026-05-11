@@ -1,72 +1,119 @@
 # Loveable-UGC
 
-Pipeline that builds image carousels for TikTok and Instagram showcasing
-sites generated with Lovable.
+Autonomous pipeline that produces 3 image carousels per day for TikTok
+and Instagram showcasing sites built with Lovable.
 
-## What it does (target state)
+You type `/go`. The system invents a niche, builds a real site in Lovable,
+captures screenshots, writes hooks/captions, renders carousels at both
+ratios, grades them, and queues the day's post.
 
-1. Pick a niche
-2. Ask Lovable (via MCP) to build a landing page for that niche
-3. Pull the site screenshot from Lovable, plus extra section captures
-4. Generate N carousel variations (different hooks) using Claude
-5. Render each as PNG slides — 1080x1920 (TikTok / Reels) and 1080x1080 (IG feed)
-6. Each design is reused for ~12 carousels, then refreshed with a new niche
+## How it runs (OAuth-only — no API keys needed)
 
-Instagram auto-posting will be wired later. For now the pipeline writes
-slides to disk so you can review and post manually.
+All thinking happens inside Claude Code (authenticated via your Pro plan
+OAuth). The Python pipeline is purely deterministic — templating, PIL
+rendering, state tracking, git. It does not call any LLM API.
 
-## Setup
-
-```bash
-pip install -r requirements.txt
-cp .env.example .env   # add ANTHROPIC_API_KEY (+ LOVABLE_API_KEY once ready)
+```
+USER
+  │
+  │  /go    (manual or Windows Task Scheduler)
+  ↓
+ORCHESTRATOR ────► PYTHON PIPELINE (deterministic)
+  │  Claude            plan / render / state / git
+  │  reasoning
+  ↓
+SUBAGENTS
+  ├─ site-builder  ──► Lovable MCP (mcp__lovable__*)
+  └─ advisor       ──► reads PNGs, grades, writes JSON verdicts
 ```
 
-## Run the end-to-end demo
+## Prerequisites
 
-This generates fake placeholder screenshots, generates 3 carousel scripts,
-and renders all slides. No API keys required — falls back to stub content
-if `ANTHROPIC_API_KEY` isn't set.
+1. Claude Code installed (desktop or web)
+2. Lovable Pro plan
+3. The Lovable MCP connector added in Claude Code:
+   - Settings → Connectors → Add custom connector
+   - URL: `https://mcp.lovable.dev`
+   - Authenticate via OAuth (one-time)
+4. Python 3.11+ with `pip install -r requirements.txt`
 
-```bash
-python -m pipeline demo --n 3
+That's it. No API keys.
+
+## Quick start
+
+In your Claude Code session, point at this repo and run:
+
+```
+/go
 ```
 
-Output lands in `data/carousels/<name>/{1080x1920,1080x1080}/slide-NN.png`.
+The orchestrator (`.claude/commands/go.md`) takes it from there.
 
-## CLI
+## Manual one-off commands
 
-| Command | What it does |
+| Command | What |
 | --- | --- |
-| `python -m pipeline demo` | Placeholders → stub content → rendered carousels |
-| `python -m pipeline placeholders --site <slug>` | Write fake site screenshots |
-| `python -m pipeline render --site <slug> --hook "..." --carousel <name>` | Render one carousel |
-| `python -m pipeline generate-content --niche ... --brand ... --prompt ...` | Generate N hook/caption sets via Claude |
-| `python -m pipeline lovable list-tools` | List tools exposed by the Lovable MCP |
-| `python -m pipeline lovable create-project --name ... --prompt ...` | Trigger a Lovable build |
-| `python -m pipeline lovable get-project <id> --screenshot-out path.png` | Pull project + screenshot |
+| `python -m pipeline plan` | Print today's action plan as JSON |
+| `python -m pipeline next-prompt --niche X --brand "Y"` | Build a detailed Lovable prompt |
+| `python -m pipeline placeholders --site X --brand "Y"` | Generate fake site screenshots (test only) |
+| `python -m pipeline ugly-site --site X-before --brand "Y"` | Generate a dated BEFORE site for revamp carousels |
+| `python -m pipeline render-batch --site X` | Render every carousel listed in `data/sites/X/content.json` |
+| `python -m pipeline render-comparison --before-site X-before --after-site X --hook "..." --carousel name` | Render one BEFORE/AFTER carousel |
+| `python -m pipeline demo` | Offline smoke test (stub content + placeholders) |
 
 ## Layout
 
-| File | Purpose |
+```
+.claude/
+  agents/
+    site-builder.md        # invents niche, builds Lovable site, writes content.json
+    advisor.md             # grades carousels before they're posted
+  commands/
+    go.md                  # /go slash command — orchestrator
+pipeline/
+  config.py                # paths, sizes, palette
+  state.py                 # JSON state (designs + carousels)
+  plan.py                  # decides today's actions
+  prompts.py               # detailed Lovable prompt template
+  niches.py                # static catalog fallback
+  design.py                # picks niche + brand (catalog-based)
+  screenshots.py           # placeholder + ugly-site generators
+  renderer.py              # slide composition (PIL)
+  content.py               # carousel script I/O
+  cli.py                   # entry point
+data/
+  sites/<slug>/            # screenshots from Lovable for each design
+  sites/<slug>/content.json # carousel hooks/captions written by orchestrator
+  sites/<slug>-before/     # dated BEFORE site for revamp content
+  carousels/<name>/        # rendered slides (1080x1920 + 1080x1080)
+  state.json               # design + carousel tracking
+docs/
+  build-next-site.md       # site-builder recipe (verbose)
+  orchestration.md         # multi-agent architecture + scheduling
+```
+
+## State files
+
+| File | What it tracks |
 | --- | --- |
-| `pipeline/config.py` | Paths, sizes, palette |
-| `pipeline/state.py` | JSON state tracker (designs + carousels) |
-| `pipeline/screenshots.py` | Placeholder site renderer (will be replaced by real captures) |
-| `pipeline/renderer.py` | Slide composition (centered, site-first) |
-| `pipeline/content.py` | Claude prompt → carousel scripts |
-| `pipeline/lovable.py` | MCP client wrapper for mcp.lovable.dev |
-| `pipeline/cli.py` | Entry point |
+| `data/state.json` | All designs (Lovable builds) and carousels rendered |
+| `data/last-advisor-review.json` | Most recent advisor verdicts |
+| `data/sites/<slug>/content.json` | Carousel scripts for one design |
 
-## Phase 2 (not done yet)
+## Scheduling (Windows)
 
-- Wire `lovable.create_project` into `demo` so real Lovable sites drive content
-- Playwright-based scroll-and-clip to capture more sections than `get_project` alone
-- Instagram Graph API posting on a schedule
-- GitHub Actions cron at 09:00 / 13:00 / 19:00
+Open Task Scheduler → Create Basic Task. Triggers at 09:00 / 13:00 / 19:00:
 
-## Examples
+```
+Program:    claude
+Arguments:  --print "/go"
+Start in:   C:\Users\Jack\Desktop\Loveable-UGC
+```
 
-`examples/png-9x16/` and `examples/png-1x1/` hold the earlier text-first
-mockups for reference. The new layout lives in `data/carousels/` after
-running `python -m pipeline demo`.
+See `docs/orchestration.md` for the long version.
+
+## What's NOT done yet
+
+- Instagram Graph API auto-post (currently /go skips this step)
+- Playwright multi-section screenshot capture (site-builder falls back to single `get_project` viewport for now)
+- Performance feedback loop (advisor doesn't yet learn from posted-vs-skipped data)

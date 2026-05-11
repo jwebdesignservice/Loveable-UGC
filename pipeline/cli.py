@@ -1,14 +1,9 @@
-"""CLI entry point.
-
-  python -m pipeline demo                 # render placeholder carousel end-to-end
-  python -m pipeline placeholders ...     # write fake site screenshots
-  python -m pipeline render ...           # render one carousel from screenshots
-  python -m pipeline generate-content ... # generate N carousel scripts via Claude
-  python -m pipeline lovable list-tools   # introspect the Lovable MCP server
+"""CLI entry point — deterministic. All LLM-driven thinking happens in
+the Claude Code orchestrator. The pipeline is a tool the orchestrator
+calls; it does not call out to LLMs itself.
 """
 from __future__ import annotations
 import json
-import sys
 from pathlib import Path
 from typing import Optional
 
@@ -17,7 +12,6 @@ from dotenv import load_dotenv
 
 from . import content as content_mod
 from . import design as design_mod
-from . import lovable as lovable_mod
 from . import niches as niches_mod
 from . import plan as plan_mod
 from . import prompts as prompts_mod
@@ -35,6 +29,60 @@ def cli() -> None:
     """Loveable-UGC pipeline."""
 
 
+# ---------------------------------------------------------------- planning
+
+
+@cli.command()
+def plan() -> None:
+    """Print today's action plan as JSON for the orchestrator to consume."""
+    p = plan_mod.build_plan()
+    click.echo(plan_mod.plan_to_json(p))
+
+
+@cli.command("next-prompt")
+@click.option("--niche", default=None,
+              help="Niche key (see pipeline/niches.py CATALOG). Auto-picks from rotation if omitted.")
+@click.option("--brand", default=None,
+              help="Brand name. Auto-picks from rotation if omitted.")
+@click.option("--extra-notes", default=None,
+              help="Free-text additions appended to the prompt (vibe direction, specific copy hints, etc).")
+@click.option("--json", "as_json", is_flag=True,
+              help="Print JSON with slug/brand/niche/prompt instead of just the prompt.")
+def next_prompt(niche: str | None, brand: str | None,
+                extra_notes: str | None, as_json: bool) -> None:
+    """Build a detailed Lovable prompt.
+
+    With --niche AND --brand: builds the prompt for exactly that.
+    With neither: picks the next entry from the static catalog.
+    The orchestrator typically passes both because it has its own
+    reasoning about what to build next.
+    """
+    if niche and brand:
+        d = design_mod.build_design(niche=niche, brand=brand,
+                                    extra_notes=extra_notes)
+    else:
+        used = _used_slugs()
+        d = design_mod.pick_next_design(used_slugs=used)
+        if niche or brand:
+            d = design_mod.build_design(
+                niche=niche or d.niche,
+                brand=brand or d.brand,
+                extra_notes=extra_notes,
+            )
+
+    if as_json:
+        click.echo(json.dumps({
+            "slug": d.slug, "brand": d.brand, "niche": d.niche,
+            "tagline": d.tagline, "lovable_prompt": d.lovable_prompt,
+        }, indent=2))
+    else:
+        click.echo(f"# {d.brand} ({d.niche}) — slug: {d.slug}", err=True)
+        click.echo(d.lovable_prompt)
+
+
+# ------------------------------------------------------------ placeholders
+
+
 @cli.command()
 @click.option("--site", default="aurea-demo", help="Site slug.")
 @click.option("--brand", default="Auréa", help="Brand name to render.")
@@ -48,6 +96,23 @@ def placeholders(site: str, brand: str) -> None:
         click.echo(f"  {p}")
 
 
+@cli.command("ugly-site")
+@click.option("--site", required=True, help="Site slug under data/sites/")
+@click.option("--brand", required=True, help="Brand name to render.")
+@click.option("--tagline", default="Your one-stop online destination.")
+def ugly_site(site: str, brand: str, tagline: str) -> None:
+    """Write a deliberately bad-looking BEFORE site (90s/2000s vibe)."""
+    ensure_dirs()
+    out = SITES_DIR / site
+    paths = screenshots_mod.make_ugly_site(out, brand=brand, tagline=tagline)
+    click.echo(f"Wrote {len(paths)} ugly screenshots to {out}")
+    for p in paths:
+        click.echo(f"  {p}")
+
+
+# ----------------------------------------------------------------- render
+
+
 @cli.command()
 @click.option("--site", required=True, help="Site slug under data/sites/")
 @click.option("--hook", required=True, help="Hook text for slide 1.")
@@ -56,11 +121,10 @@ def placeholders(site: str, brand: str) -> None:
 @click.option("--ratios", default="9x16,1x1",
               help="Comma-separated: 9x16,1x1")
 def render(site: str, hook: str, carousel_name: str, ratios: str) -> None:
-    """Render a carousel for one site + one hook."""
+    """Render a single carousel for one site + one hook."""
     site_dir = SITES_DIR / site
     if not site_dir.exists():
-        raise click.ClickException(
-            f"No site at {site_dir}. Run: python -m pipeline placeholders --site {site}")
+        raise click.ClickException(f"No site at {site_dir}.")
     shots = sorted(site_dir.glob("*.png"))
     if not shots:
         raise click.ClickException(f"No screenshots found in {site_dir}")
@@ -80,63 +144,39 @@ def render(site: str, hook: str, carousel_name: str, ratios: str) -> None:
             click.echo(f"  {p}")
 
 
-@cli.command("generate-content")
-@click.option("--niche", required=True)
-@click.option("--brand", required=True)
-@click.option("--description", required=True)
-@click.option("--prompt", required=True,
-              help="The Lovable prompt that built the site.")
-@click.option("--url", default="", help="Live site URL.")
-@click.option("--n", default=4, type=int)
-@click.option("--out", "out_path", default="-",
-              help="Output path or '-' for stdout.")
-def generate_content(niche: str, brand: str, description: str, prompt: str,
-                     url: str, n: int, out_path: str) -> None:
-    """Generate N carousel scripts (hook, caption, hashtags) via Claude."""
-    if content_mod.have_api_key():
-        scripts = content_mod.generate_carousels(
-            niche=niche, brand=brand, description=description,
-            prompt=prompt, url=url, n=n,
-        )
-    else:
-        click.echo("(no ANTHROPIC_API_KEY — using stub scripts)", err=True)
-        scripts = content_mod.stub_carousels(n=n)
+@cli.command("render-batch")
+@click.option("--site", required=True,
+              help="Site slug under data/sites/")
+@click.option("--content", "content_path", default=None,
+              help="Path to JSON with carousels. Defaults to data/sites/<slug>/content.json")
+def render_batch(site: str, content_path: str | None) -> None:
+    """Render every carousel listed in a content JSON file for one site.
 
-    payload = json.dumps([s.__dict__ for s in scripts], indent=2)
-    if out_path == "-":
-        click.echo(payload)
-    else:
-        Path(out_path).write_text(payload)
-        click.echo(f"Wrote {out_path}")
-
-
-@cli.command()
-@click.option("--site", default="aurea-demo")
-@click.option("--brand", default="Auréa")
-@click.option("--n", default=3, type=int,
-              help="How many distinct carousels to render.")
-def demo(site: str, brand: str, n: int) -> None:
-    """End-to-end demo: placeholders -> stub content -> rendered carousels."""
-    ensure_dirs()
-
+    The orchestrator writes the JSON (with hooks/captions/hashtags it
+    invented) and then calls this command. See content.CONTENT_JSON_SCHEMA
+    for the expected shape.
+    """
     site_dir = SITES_DIR / site
-    if not list(site_dir.glob("*.png")):
-        click.echo(f"Generating placeholder screenshots for {brand}...")
-        screenshots_mod.make_placeholder_site(site_dir, brand=brand)
-
-    scripts = (content_mod.generate_carousels(
-        niche="skincare ecommerce", brand=brand,
-        description=f"Clean botanical skincare brand. {brand}.",
-        prompt=f"Build a warm botanical landing page for {brand}, a clean skincare brand.",
-        url="https://example.lovable.app", n=n,
-    ) if content_mod.have_api_key() else content_mod.stub_carousels(n=n))
-
+    if not site_dir.exists():
+        raise click.ClickException(f"No site at {site_dir}.")
     shots = sorted(site_dir.glob("*.png"))
+    if not shots:
+        raise click.ClickException(f"No screenshots found in {site_dir}")
+
+    path = Path(content_path) if content_path else site_dir / "content.json"
+    if not path.exists():
+        raise click.ClickException(
+            f"No content.json at {path}.\n"
+            f"The orchestrator should write it. Schema:\n\n"
+            f"{content_mod.CONTENT_JSON_SCHEMA}"
+        )
+
+    scripts = content_mod.load_from_json(path)
     state = state_mod.load()
 
     for i, s in enumerate(scripts, start=1):
         cname = f"{site}-{i:02d}-{s.pillar}"
-        click.echo(f"\n[{i}/{len(scripts)}] {s.hook}")
+        click.echo(f"[{i}/{len(scripts)}] {s.hook}")
         written = render_carousel(hook=s.hook, screenshots=shots,
                                   out_dir=CAROUSELS_DIR / cname)
         click.echo(f"  -> {CAROUSELS_DIR / cname}")
@@ -148,53 +188,30 @@ def demo(site: str, brand: str, n: int) -> None:
             hook=s.hook, caption=s.caption, hashtags=s.hashtags,
             slide_paths=[p for paths in written.values() for p in paths],
         ))
+
+    before_slug = f"{site}-before"
+    before_dir = SITES_DIR / before_slug
+    if before_dir.exists() and list(before_dir.glob("*.png")):
+        before_shot = sorted(before_dir.glob("*.png"))[0]
+        revamp_hook = "rebuilt this in lovable. one prompt."
+        cname = f"{site}-revamp"
+        click.echo(f"[revamp] {revamp_hook}")
+        written = render_comparison_carousel(
+            hook=revamp_hook, before=before_shot,
+            after_screenshots=shots,
+            out_dir=CAROUSELS_DIR / cname,
+        )
+        click.echo(f"  -> {CAROUSELS_DIR / cname}")
+        state.carousels.append(state_mod.Carousel(
+            id=cname, design_id=site, pillar="one-shot-revamp",
+            hook=revamp_hook,
+            caption=f"one prompt in lovable turned the old site into this.",
+            hashtags=["#lovable", "#webdesign", "#revamp"],
+            slide_paths=[p for paths in written.values() for p in paths],
+        ))
+
     state_mod.save(state)
-    click.echo(f"\nDone. {len(scripts)} carousels in {CAROUSELS_DIR}.")
-
-
-@cli.command("ugly-site")
-@click.option("--site", required=True, help="Site slug under data/sites/")
-@click.option("--brand", required=True, help="Brand name to render.")
-@click.option("--tagline", default="Your one-stop online destination.")
-def ugly_site(site: str, brand: str, tagline: str) -> None:
-    """Write a deliberately bad-looking BEFORE site (90s/2000s vibe)."""
-    ensure_dirs()
-    out = SITES_DIR / site
-    paths = screenshots_mod.make_ugly_site(out, brand=brand, tagline=tagline)
-    click.echo(f"Wrote {len(paths)} ugly screenshots to {out}")
-    for p in paths:
-        click.echo(f"  {p}")
-
-
-@cli.command("comparison-demo")
-@click.option("--brand", default="Auréa")
-@click.option("--hook", default="rebuilt this in lovable. one prompt.")
-def comparison_demo(brand: str, hook: str) -> None:
-    """End-to-end demo of a BEFORE/AFTER comparison carousel."""
-    ensure_dirs()
-
-    after_dir = SITES_DIR / f"{brand.lower().replace(' ', '-')}-after"
-    if not list(after_dir.glob("*.png")):
-        click.echo(f"Generating polished AFTER site for {brand}...")
-        screenshots_mod.make_placeholder_site(after_dir, brand=brand)
-
-    before_dir = SITES_DIR / f"{brand.lower().replace(' ', '-')}-before"
-    if not list(before_dir.glob("*.png")):
-        click.echo(f"Generating dated BEFORE site for {brand}...")
-        screenshots_mod.make_ugly_site(before_dir, brand=brand)
-
-    before_shot = sorted(before_dir.glob("*.png"))[0]
-    after_shots = sorted(after_dir.glob("*.png"))
-    out_dir = CAROUSELS_DIR / f"{brand.lower().replace(' ', '-')}-revamp-demo"
-
-    click.echo(f"\nRendering BEFORE/AFTER carousel: {hook}")
-    written = render_comparison_carousel(
-        hook=hook, before=before_shot,
-        after_screenshots=after_shots, out_dir=out_dir,
-    )
-    click.echo(f"  -> {out_dir}")
-    for ratio, paths in written.items():
-        click.echo(f"     {ratio}: {len(paths)} slides")
+    click.echo(f"\nDone. {len(state.carousels)} carousels total.")
 
 
 @cli.command("render-comparison")
@@ -228,46 +245,47 @@ def render_comparison_cmd(before_site: str, after_site: str, hook: str,
             click.echo(f"  {p}")
 
 
-@cli.command("next-prompt")
-@click.option("--niche", default=None,
-              help="Override the niche. Otherwise Claude invents one.")
-@click.option("--brand", default=None,
-              help="Override the brand. Otherwise Claude invents one.")
-@click.option("--json", "as_json", is_flag=True,
-              help="Print JSON with slug/brand/niche/prompt instead of just the prompt.")
-def next_prompt(niche: str | None, brand: str | None,
-                as_json: bool) -> None:
-    """Invent the next design and print its full Lovable prompt.
+# --------------------------------------------------------- offline smoke
 
-    By default Claude picks a fresh niche + brand based on what's already
-    been built (folders under data/sites/). Use --niche / --brand to
-    override. Falls back to a static catalog if ANTHROPIC_API_KEY is unset.
+
+@cli.command()
+@click.option("--site", default="aurea-demo")
+@click.option("--brand", default="Auréa")
+@click.option("--n", default=3, type=int)
+def demo(site: str, brand: str, n: int) -> None:
+    """Offline smoke test: placeholders + stub content -> rendered carousels.
+
+    Only use this to verify the renderer works locally. In a real run the
+    orchestrator drives the whole flow and content.json is written by
+    Claude Code, not by stubs.
     """
-    used = _used_slugs()
-    if niche and brand:
-        d = design_mod.InventedDesign(
-            niche=niche, brand=brand, tagline="",
-            lovable_prompt=prompts_mod.build_prompt(niche=niche, brand=brand),
-            slug=design_mod._slug(brand),
-        )
-    else:
-        d = design_mod.invent_next_design(used_slugs=used)
-        if niche:
-            d = design_mod.InventedDesign(
-                niche=niche, brand=d.brand, tagline=d.tagline,
-                lovable_prompt=prompts_mod.build_prompt(niche=niche,
-                                                        brand=d.brand),
-                slug=d.slug,
-            )
+    ensure_dirs()
 
-    if as_json:
-        click.echo(json.dumps({
-            "slug": d.slug, "brand": d.brand, "niche": d.niche,
-            "tagline": d.tagline, "lovable_prompt": d.lovable_prompt,
-        }, indent=2))
-    else:
-        click.echo(f"# {d.brand} ({d.niche}) — slug: {d.slug}", err=True)
-        click.echo(d.lovable_prompt)
+    site_dir = SITES_DIR / site
+    if not list(site_dir.glob("*.png")):
+        click.echo(f"Generating placeholder screenshots for {brand}...")
+        screenshots_mod.make_placeholder_site(site_dir, brand=brand)
+
+    scripts = content_mod.stub_carousels(n=n)
+    state = state_mod.load()
+    shots = sorted(site_dir.glob("*.png"))
+
+    for i, s in enumerate(scripts, start=1):
+        cname = f"{site}-{i:02d}-{s.pillar}"
+        click.echo(f"[{i}/{n}] {s.hook}")
+        written = render_carousel(hook=s.hook, screenshots=shots,
+                                  out_dir=CAROUSELS_DIR / cname)
+        state.carousels.append(state_mod.Carousel(
+            id=cname, design_id=site, pillar=s.pillar,
+            hook=s.hook, caption=s.caption, hashtags=s.hashtags,
+            slide_paths=[p for paths in written.values() for p in paths],
+        ))
+    state_mod.save(state)
+    click.echo(f"\nDone.")
+
+
+if __name__ == "__main__":
+    cli()
 
 
 def _used_slugs() -> list[str]:
@@ -276,145 +294,3 @@ def _used_slugs() -> list[str]:
     return [p.name for p in SITES_DIR.iterdir()
             if p.is_dir() and p.name not in {".gitkeep"}
             and not p.name.endswith("-before")]
-
-
-@cli.command()
-def plan() -> None:
-    """Print today's action plan as JSON for the orchestrator to consume."""
-    p = plan_mod.build_plan()
-    click.echo(plan_mod.plan_to_json(p))
-
-
-@cli.command("auto")
-@click.option("--n", default=4, type=int,
-              help="Carousels to render per site.")
-def auto(n: int) -> None:
-    """Render carousels for every site in data/sites/ that doesn't already
-    have a carousel folder. Skips ugly/before sites (folders ending -before)."""
-    ensure_dirs()
-    if not SITES_DIR.exists():
-        click.echo("No data/sites/ directory yet."); return
-
-    site_dirs = [d for d in SITES_DIR.iterdir()
-                 if d.is_dir() and not d.name.endswith("-before")
-                 and not d.name.startswith(".")]
-    if not site_dirs:
-        click.echo("No sites found in data/sites/."); return
-
-    state = state_mod.load()
-    rendered_any = False
-
-    for site_dir in sorted(site_dirs):
-        slug = site_dir.name
-        existing = [c for c in state.carousels if c.design_id == slug]
-        if existing:
-            click.echo(f"[skip] {slug} already has {len(existing)} carousels")
-            continue
-        shots = sorted(site_dir.glob("*.png"))
-        if not shots:
-            click.echo(f"[skip] {slug} has no screenshots"); continue
-
-        nb = next((nb for nb in niches_mod.CATALOG
-                   if niches_mod.slug_for(nb) == slug), None)
-        brand = nb.brand if nb else slug.replace("-", " ").title()
-        niche = nb.niche if nb else "modern brand"
-
-        if content_mod.have_api_key():
-            scripts = content_mod.generate_carousels(
-                niche=niche, brand=brand,
-                description=f"Lovable-built site for {brand}.",
-                prompt=prompts_mod.build_prompt(niche=niche, brand=brand),
-                url="", n=n,
-            )
-        else:
-            click.echo("(no ANTHROPIC_API_KEY — using stub scripts)", err=True)
-            scripts = content_mod.stub_carousels(n=n)
-
-        click.echo(f"\n{slug}: {len(scripts)} carousels")
-        for i, s in enumerate(scripts, start=1):
-            cname = f"{slug}-{i:02d}-{s.pillar}"
-            click.echo(f"  [{i}] {s.hook}")
-            written = render_carousel(hook=s.hook, screenshots=shots,
-                                      out_dir=CAROUSELS_DIR / cname)
-            state.carousels.append(state_mod.Carousel(
-                id=cname, design_id=slug, pillar=s.pillar,
-                hook=s.hook, caption=s.caption, hashtags=s.hashtags,
-                slide_paths=[p for paths in written.values() for p in paths],
-            ))
-            rendered_any = True
-
-        before_slug = f"{slug}-before"
-        before_dir = SITES_DIR / before_slug
-        if before_dir.exists() and list(before_dir.glob("*.png")):
-            before_shot = sorted(before_dir.glob("*.png"))[0]
-            revamp_hook = f"rebuilt this in lovable. one prompt."
-            cname = f"{slug}-revamp"
-            click.echo(f"  [revamp] {revamp_hook}")
-            written = render_comparison_carousel(
-                hook=revamp_hook, before=before_shot,
-                after_screenshots=shots,
-                out_dir=CAROUSELS_DIR / cname,
-            )
-            state.carousels.append(state_mod.Carousel(
-                id=cname, design_id=slug, pillar="one-shot-revamp",
-                hook=revamp_hook,
-                caption=f"one prompt in lovable turned the old {brand} site into this.",
-                hashtags=["#lovable", "#webdesign", "#revamp"],
-                slide_paths=[p for paths in written.values() for p in paths],
-            ))
-
-    state_mod.save(state)
-    if not rendered_any:
-        click.echo("\nNothing to render. Add a new site under data/sites/<slug>/")
-    else:
-        click.echo(f"\nState updated. {len(state.carousels)} carousels total.")
-
-
-@cli.group()
-def lovable() -> None:
-    """Lovable MCP commands (requires LOVABLE_API_KEY)."""
-
-
-@lovable.command("list-tools")
-def lovable_list_tools() -> None:
-    """Print the tools exposed by the Lovable MCP server."""
-    try:
-        tools = lovable_mod.list_tools()
-    except Exception as e:
-        raise click.ClickException(str(e))
-    for t in tools:
-        click.echo(t)
-
-
-@lovable.command("create-project")
-@click.option("--name", required=True)
-@click.option("--prompt", required=True,
-              help="Initial message describing what to build.")
-def lovable_create_project(name: str, prompt: str) -> None:
-    """Create a Lovable project from a prompt and print the response."""
-    try:
-        result = lovable_mod.create_project(name=name, initial_message=prompt)
-    except Exception as e:
-        raise click.ClickException(str(e))
-    click.echo(json.dumps(result, indent=2))
-
-
-@lovable.command("get-project")
-@click.argument("project_id")
-@click.option("--screenshot-out", default=None,
-              help="If set, save the screenshot PNG to this path.")
-def lovable_get_project(project_id: str, screenshot_out: Optional[str]) -> None:
-    try:
-        result = lovable_mod.get_project(project_id)
-    except Exception as e:
-        raise click.ClickException(str(e))
-    click.echo(json.dumps(result, indent=2))
-
-    if screenshot_out and "screenshot" in result:
-        path = lovable_mod.save_screenshot(result["screenshot"],
-                                           Path(screenshot_out))
-        click.echo(f"\nScreenshot saved to {path}")
-
-
-if __name__ == "__main__":
-    cli()

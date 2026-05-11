@@ -1,0 +1,10 @@
+{
+  "carousels": [
+    {"pillar": "site-previews", "hook": "i built this with lovable in 2 hours.",
+     "caption": "everything you see was one prompt + small tweaks.",
+     "hashtags": ["#lovable", "#webdesign", "#buildinpublic"]},
+    {"pillar": "one-prompt-site", "hook": "lovable made this from one prompt.",
+     "caption": "16 words. one full site.",
+     "hashtags": ["#lovable", "#aitools"]}
+  ]
+}

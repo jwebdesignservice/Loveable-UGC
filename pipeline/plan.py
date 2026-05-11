@@ -62,8 +62,8 @@ def build_plan() -> Plan:
 
     plan.actions.append(Action(
         kind="render_carousels",
-        detail={"n_per_site": 4,
-                "command": "python -m pipeline auto --n 4"},
+        detail={"reads": "data/sites/<slug>/content.json",
+                "command_per_site": "python -m pipeline render-batch --site <slug>"},
     ))
 
     plan.actions.append(Action(
