@@ -1,0 +1,30 @@
+{
+  "reviewed_at": "2026-05-11T00:00:00Z",
+  "results": [
+    {
+      "carousel": "sable-01-site-previews",
+      "verdict": "APPROVE",
+      "notes": "Hook is short, conversational, lowercase, natural Lovable mention. Site preview slides show real layout/typography/copy. Composition clean."
+    },
+    {
+      "carousel": "sable-02-one-prompt-site",
+      "verdict": "APPROVE",
+      "notes": "Hook 'told lovable: modern restaurant, candlelit, serif.' is punchy and credibly UGC. Slides well composed."
+    },
+    {
+      "carousel": "sable-03-site-previews",
+      "verdict": "APPROVE",
+      "notes": "Hook 'this restaurant site? lovable. not an agency.' is conversational and on-brand. Slides clean."
+    },
+    {
+      "carousel": "sable-04-one-prompt-site",
+      "verdict": "APPROVE",
+      "notes": "Hook '14 words and lovable plated the whole site.' is witty, restaurant-appropriate wordplay. Slides clean."
+    },
+    {
+      "carousel": "sable-revamp",
+      "verdict": "RETRY",
+      "notes": "Slide order is confusing: hook slide (1) shows the AFTER site, slide 2 jumps backward to BEFORE, then 3-6 are AFTER again. Reorder so BEFORE comes first after the hook, or have the hook slide stand alone without the polished preview underneath."
+    }
+  ]
+}
