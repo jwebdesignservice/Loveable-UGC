@@ -16,6 +16,7 @@ import click
 from dotenv import load_dotenv
 
 from . import content as content_mod
+from . import design as design_mod
 from . import lovable as lovable_mod
 from . import niches as niches_mod
 from . import prompts as prompts_mod
@@ -228,27 +229,52 @@ def render_comparison_cmd(before_site: str, after_site: str, hook: str,
 
 @cli.command("next-prompt")
 @click.option("--niche", default=None,
-              help="Niche key (e.g. property, skincare). Auto-picks from catalog if omitted.")
+              help="Override the niche. Otherwise Claude invents one.")
 @click.option("--brand", default=None,
-              help="Brand name override. Defaults to catalog entry.")
-@click.option("--extra-notes", default=None,
-              help="Free-text additions appended to the prompt.")
+              help="Override the brand. Otherwise Claude invents one.")
+@click.option("--json", "as_json", is_flag=True,
+              help="Print JSON with slug/brand/niche/prompt instead of just the prompt.")
 def next_prompt(niche: str | None, brand: str | None,
-                extra_notes: str | None) -> None:
-    """Print a fully-detailed Lovable prompt for the next design.
+                as_json: bool) -> None:
+    """Invent the next design and print its full Lovable prompt.
 
-    Auto-picks from the niche catalog if --niche is not supplied,
-    skipping niches that already have a folder under data/sites/.
+    By default Claude picks a fresh niche + brand based on what's already
+    been built (folders under data/sites/). Use --niche / --brand to
+    override. Falls back to a static catalog if ANTHROPIC_API_KEY is unset.
     """
-    if niche is None or brand is None:
-        used = [p.name for p in SITES_DIR.iterdir()
-                if SITES_DIR.exists() and p.is_dir() and p.name != ".gitkeep"]
-        pick = niches_mod.next_niche(used_slugs=used)
-        niche = niche or pick.niche
-        brand = brand or pick.brand
+    used = _used_slugs()
+    if niche and brand:
+        d = design_mod.InventedDesign(
+            niche=niche, brand=brand, tagline="",
+            lovable_prompt=prompts_mod.build_prompt(niche=niche, brand=brand),
+            slug=design_mod._slug(brand),
+        )
+    else:
+        d = design_mod.invent_next_design(used_slugs=used)
+        if niche:
+            d = design_mod.InventedDesign(
+                niche=niche, brand=d.brand, tagline=d.tagline,
+                lovable_prompt=prompts_mod.build_prompt(niche=niche,
+                                                        brand=d.brand),
+                slug=d.slug,
+            )
 
-    click.echo(prompts_mod.build_prompt(niche=niche, brand=brand,
-                                        extra_notes=extra_notes))
+    if as_json:
+        click.echo(json.dumps({
+            "slug": d.slug, "brand": d.brand, "niche": d.niche,
+            "tagline": d.tagline, "lovable_prompt": d.lovable_prompt,
+        }, indent=2))
+    else:
+        click.echo(f"# {d.brand} ({d.niche}) — slug: {d.slug}", err=True)
+        click.echo(d.lovable_prompt)
+
+
+def _used_slugs() -> list[str]:
+    if not SITES_DIR.exists():
+        return []
+    return [p.name for p in SITES_DIR.iterdir()
+            if p.is_dir() and p.name not in {".gitkeep"}
+            and not p.name.endswith("-before")]
 
 
 @cli.command("auto")

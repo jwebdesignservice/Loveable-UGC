@@ -1,112 +1,102 @@
 # Recipe: build the next Lovable site for UGC
 
-This is a runbook for **your** Claude Code session (the one with the
-Lovable MCP connector active). Run it whenever the current design has
-been used for ~12 posts and you need a fresh one.
+Runbook for **your** Claude Code session (the one with the Lovable MCP
+connector). Triggered when the current design is spent or whenever you
+want a fresh one.
 
-You ask Claude Code something like:
+You just say:
 
-> follow docs/build-next-site.md
+> Follow docs/build-next-site.md
 
-Or with overrides:
-
-> follow docs/build-next-site.md — use the property niche, brand LAWSITY
-
-Claude Code then does the steps below in order. Don't skip steps.
+No niche, no brand, no prompt. The pipeline picks everything.
 
 ---
 
-## Step 1 — Pick the niche and brand
-
-Generate the prompt for the next design:
+## Step 1 — Pick the next design (autonomous)
 
 ```bash
-python -m pipeline next-prompt
+python -m pipeline next-prompt --json
 ```
 
-This auto-picks the next niche from `pipeline/niches.py`, skipping any
-brand that already has a folder under `data/sites/`. To force a choice:
+This calls Claude to invent:
+- a niche that contrasts with what's already in `data/sites/`
+- a fresh brand name
+- a tagline
+- the full detailed Lovable prompt (heavy on scroll animations, custom
+  branding, $20K-agency feel)
 
-```bash
-python -m pipeline next-prompt --niche property --brand LAWSITY
-```
+The JSON output has: `slug`, `brand`, `niche`, `tagline`, `lovable_prompt`.
 
-Capture the output — that's the full Lovable prompt. Save the chosen
-**slug** (lowercase brand with hyphens) for later steps. Example slug
-for `LAWSITY` is `lawsity`.
+Save those fields. The `slug` is the folder name to use later.
+
+If `ANTHROPIC_API_KEY` isn't set, it falls back to the static catalog
+in `pipeline/niches.py`.
 
 ## Step 2 — Build the site in Lovable
 
-Use the `mcp__lovable__create_project` tool (the Lovable MCP connector).
+Use the `mcp__lovable__create_project` tool with:
+- `name` → the brand
+- `initial_message` → the `lovable_prompt` from step 1
 
-- `name` → the brand (e.g. `LAWSITY`)
-- `initial_message` → the full prompt from step 1
-- Wait for the build to finish (the tool returns when ready)
+Wait for the build. Capture the returned `project_id`, `preview_url`,
+and `screenshot`.
 
-Capture the returned `project_id`, `preview_url`, and any `screenshot` field.
+## Step 3 — Iterate if weak
 
-## Step 3 — Iterate if needed
+Look at the screenshot. If the site is template-looking, missing
+animations, or has filler copy, send one targeted message via
+`mcp__lovable__send_message`:
 
-Look at the screenshot. If it's weak (template-looking, no animations,
-generic copy), send one improvement message via `mcp__lovable__send_message`.
-Common nudges that work:
+- "Make the hero text reveal stagger on scroll. Add parallax on the hero
+  imagery. Every section should fade and slide in as it enters the
+  viewport. Smooth scroll throughout."
+- "Replace placeholder copy with specific, in-brand lines for {brand}.
+  No 'build faster, ship better' filler."
+- "Add a horizontal scroll-scrub section for {feature}."
 
-- "Make the hero text reveal on scroll, staggered. Add parallax on the
-  hero imagery. Sections fade and slide in as you scroll. Smooth scroll."
-- "Replace the placeholder copy throughout with specific, in-brand copy
-  for {brand}. No 'build faster, ship better'-style filler."
-- "Add a horizontal scrub section for the {feature}."
-
-Stop iterating after 1–2 rounds. We can re-roll the niche if it's bad.
+Stop after 1-2 rounds. If it still doesn't land, restart from step 1.
 
 ## Step 4 — Capture screenshots
 
-You want 4–6 sections of the finished site, saved as PNGs under
-`data/sites/<slug>/`:
+Save 4-6 PNGs into `data/sites/<slug>/`:
 
 ```
-data/sites/lawsity/01-hero.png
-data/sites/lawsity/02-listings.png
-data/sites/lawsity/03-map.png
-data/sites/lawsity/04-team.png
-data/sites/lawsity/05-footer.png
+data/sites/<slug>/01-hero.png
+data/sites/<slug>/02-features.png
+data/sites/<slug>/03-testimonials.png
+data/sites/<slug>/04-footer.png
 ```
 
-Two ways to get them:
+**Option A** — call `mcp__lovable__get_project` repeatedly while sending
+scroll-by-section messages.
 
-**Option A — use `get_project` repeatedly while sending scroll messages.**
-The screenshot returned is the current viewport. Crude but works.
+**Option B** — open `preview_url` in Playwright, scroll, screenshot each
+section. Higher quality.
 
-**Option B — Playwright on the preview URL.** Open the preview URL in a
-headless browser, scroll, screenshot each section. Better quality.
+Number them in order so the carousel reads top-down.
 
-Either way, save them numbered in order so the carousel reads top-down.
+## Step 5 — Optional: dated BEFORE site
 
-## Step 5 — (Optional) Generate a BEFORE site for revamp carousels
-
-If you want a one-shot-revamp carousel off this design:
+For a one-shot-revamp carousel:
 
 ```bash
 python -m pipeline ugly-site --site <slug>-before --brand "<Brand>"
 ```
 
-This writes deliberately-dated PNGs to `data/sites/<slug>-before/`.
-Skip if you only want clean-walkthrough carousels.
+Writes a deliberately 2005-era site to `data/sites/<slug>-before/`.
 
-## Step 6 — Trigger the carousel pipeline
+## Step 6 — Render the carousels
 
 ```bash
 python -m pipeline auto --n 4
 ```
 
-This scans `data/sites/`, finds any folder that doesn't have carousels
-yet, and renders 4 fresh carousels per site at 1080x1920 and 1080x1080.
-If a matching `-before` folder exists, it also renders a revamp
-comparison carousel.
+Renders 4 carousels per new site at both ratios. If a matching
+`-before` folder exists, also renders a revamp comparison carousel.
 
-Outputs land in `data/carousels/<carousel-name>/{1080x1920,1080x1080}/`.
+Output lands in `data/carousels/<carousel-name>/{1080x1920,1080x1080}/`.
 
-## Step 7 — Commit and push
+## Step 7 — Commit + push
 
 ```bash
 git add data/sites data/carousels
@@ -118,25 +108,11 @@ git push origin claude/add-powershell-setup-script-tN8lz
 
 ## Quick reference
 
-| What | Command |
+| Command | Purpose |
 | --- | --- |
-| Print next Lovable prompt | `python -m pipeline next-prompt` |
-| Print a specific niche's prompt | `python -m pipeline next-prompt --niche skincare --brand "Auréa"` |
-| Generate placeholder site (no Lovable) | `python -m pipeline placeholders --site <slug> --brand "<Brand>"` |
-| Generate dated BEFORE site | `python -m pipeline ugly-site --site <slug>-before --brand "<Brand>"` |
-| Render carousels for everything new | `python -m pipeline auto --n 4` |
-| Render one specific carousel | `python -m pipeline render --site <slug> --hook "..." --carousel <name>` |
-| One-shot revamp carousel | `python -m pipeline render-comparison --before-site <slug>-before --after-site <slug> --hook "..." --carousel <name>` |
-
-## Niches in rotation
-
-(see `pipeline/niches.py` to add more)
-
-- property → LAWSITY
-- skincare → Auréa
-- saas → Pulseboard
-- agency → Stoke & Stone
-- restaurant → Sable
-- fitness → Northbound
-- fashion → Method/Form
-- finance → Ledgerlight
+| `python -m pipeline next-prompt --json` | Autonomous niche + brand + full Lovable prompt |
+| `python -m pipeline next-prompt --niche property --brand LAWSITY` | Same, but override choices |
+| `python -m pipeline ugly-site --site <slug>-before --brand "<Brand>"` | Generate a dated BEFORE site |
+| `python -m pipeline auto --n 4` | Render carousels for any new sites |
+| `python -m pipeline render --site <slug> --hook "..." --carousel <name>` | Render one specific carousel |
+| `python -m pipeline render-comparison --before-site <slug>-before --after-site <slug> --hook "..." --carousel <name>` | One-shot revamp carousel |
