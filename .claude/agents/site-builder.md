@@ -76,16 +76,20 @@ targeted, specific fix. Examples:
 Wait for completion. Stop after one iteration regardless. If it's still
 weak, accept it and move on — the orchestrator will refresh next time.
 
-### 5. Capture four section screenshots
+### 5. Capture section screenshots
 
-Save these into `data/sites/<slug>/`:
+Save into `data/sites/<slug>/`:
 
 ```
-01-hero.png         — the top of the page
-02-features.png     — features or product grid mid-section
-03-testimonials.png — social proof / testimonials / stats band
-04-footer.png       — footer + newsletter
+00-fullpage.png     — the entire scrollable page as one tall PNG
+01-hero.png         — the hero section alone
+02-sections.png     — next 2-3 sections grouped
+03-sections.png     — next 2-3 sections grouped (if site is long enough)
+...                 — variable count; last group includes the footer
 ```
+
+The exact number of `NN-sections.png` files depends on how many
+sections the Lovable site has below the hero. Hero is always solo.
 
 **Preferred — Playwright capture (the `capture` CLI command):**
 
