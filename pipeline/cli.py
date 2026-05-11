@@ -96,6 +96,26 @@ def placeholders(site: str, brand: str) -> None:
         click.echo(f"  {p}")
 
 
+@cli.command()
+@click.option("--url", required=True,
+              help="Lovable preview URL (e.g. https://sable-restaurant.lovable.app).")
+@click.option("--site", required=True,
+              help="Slug; screenshots saved to data/sites/<slug>/.")
+def capture(url: str, site: str) -> None:
+    """Capture four section screenshots from a Lovable preview URL.
+
+    Uses Playwright + headless Chromium. Install once with:
+      pip install playwright && playwright install chromium
+    """
+    from .capture import capture_site
+    ensure_dirs()
+    out = SITES_DIR / site
+    paths = capture_site(url, out)
+    click.echo(f"Wrote {len(paths)} screenshots to {out}")
+    for p in paths:
+        click.echo(f"  {p}")
+
+
 @cli.command("ugly-site")
 @click.option("--site", required=True, help="Site slug under data/sites/")
 @click.option("--brand", required=True, help="Brand name to render.")

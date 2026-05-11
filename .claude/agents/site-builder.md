@@ -87,15 +87,29 @@ Save these into `data/sites/<slug>/`:
 04-footer.png       — footer + newsletter
 ```
 
-Two ways:
+**Preferred — Playwright capture (the `capture` CLI command):**
 
-**Option A** — `mcp__lovable__get_project` returns one viewport
-screenshot. Call it, scroll the project via `mcp__lovable__send_message`
-("scroll to features section"), call again. Crude but works.
+```
+python -m pipeline capture --url <preview_url> --site <slug>
+```
 
-**Option B** — open `preview_url` in a Playwright-based browser
-(`bash playwright install chromium` first if needed), scroll, screenshot.
-Higher quality. Use this if Playwright is available.
+This launches headless Chromium, scrolls to four positions (hero,
+~1/3 down, ~2/3 down, footer), and saves the four PNGs with the
+correct filenames. It auto-detects `<section>` boundaries when
+possible and falls back to evenly-spaced positions otherwise.
+
+First-time setup on a fresh machine:
+```
+pip install playwright
+playwright install chromium
+sudo playwright install-deps   # Linux only
+```
+
+**Fallback — single viewport via MCP:** if Playwright won't run (sandbox
+without network access to *.lovable.app, missing system libs, etc.),
+call `mcp__lovable__get_project` and use the returned screenshot as
+`01-hero.png`. Then report that 1/4 screenshots were captured so the
+orchestrator knows to either proceed with placeholders or skip.
 
 Either way, the images should be tall portrait crops.
 
