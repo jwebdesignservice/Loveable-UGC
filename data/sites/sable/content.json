@@ -1,0 +1,28 @@
+{
+  "carousels": [
+    {
+      "pillar": "site-previews",
+      "hook": "lovable made my restaurant look like this.",
+      "caption": "sable. cream, burgundy, brass. candle-lit plated dishes shot from above. lovable handled the whole build in one go.",
+      "hashtags": ["#lovable", "#webdesign", "#restaurantbranding", "#buildinpublic"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "told lovable: modern restaurant, candlelit, serif.",
+      "caption": "cream + deep burgundy palette, small-caps subheads, sticky scroll-scrub on the chef story. one prompt did all of it.",
+      "hashtags": ["#lovable", "#aitools", "#nocode", "#designinspo"]
+    },
+    {
+      "pillar": "site-previews",
+      "hook": "this restaurant site? lovable. not an agency.",
+      "caption": "sable looks like a $20k agency build. the chef portrait reveal on scroll alone is unreal. all lovable.",
+      "hashtags": ["#lovable", "#webdesign", "#restaurantdesign", "#aitools"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "14 words and lovable plated the whole site.",
+      "caption": "plated dishes from above, hands pouring wine, brass accents — lovable filled in every detail i didn't ask for.",
+      "hashtags": ["#lovable", "#vibecoding", "#indiehackers", "#hospitality", "#design"]
+    }
+  ]
+}
