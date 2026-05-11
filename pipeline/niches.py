@@ -46,4 +46,8 @@ def next_niche(used_slugs: list[str]) -> NicheBrand:
 
 
 def slug_for(nb: NicheBrand) -> str:
-    return nb.brand.lower().replace(" ", "-").replace("/", "-")
+    return (nb.brand.lower()
+            .replace(" ", "-")
+            .replace("/", "-")
+            .replace("&", "and")
+            .strip("-"))
