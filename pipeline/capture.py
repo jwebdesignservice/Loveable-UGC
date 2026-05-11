@@ -23,6 +23,7 @@ from PIL import Image
 VIEWPORT_W = 1080
 VIEWPORT_H = 1920
 NAV_TIMEOUT_MS = 60_000
+SCREENSHOT_TIMEOUT_MS = 120_000
 SETTLE_AFTER_LOAD_S = 2.0
 TARGET_CHUNK_SIZE = 3
 
@@ -53,9 +54,24 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
             device_scale_factor=2,
         )
         page = context.new_page()
-        page.goto(preview_url, wait_until="networkidle",
+        page.goto(preview_url, wait_until="domcontentloaded",
                   timeout=NAV_TIMEOUT_MS)
+        try:
+            page.wait_for_load_state("networkidle", timeout=15_000)
+        except Exception:
+            pass  # Lovable previews sometimes keep a socket open forever
         time.sleep(SETTLE_AFTER_LOAD_S)
+
+        # Kill animations/transitions so the full-page screenshot doesn't
+        # wait forever for a scroll-driven element to settle.
+        page.add_style_tag(content="""
+            *, *::before, *::after {
+                animation-duration: 0s !important;
+                animation-delay: 0s !important;
+                transition-duration: 0s !important;
+                transition-delay: 0s !important;
+            }
+        """)
 
         # Pre-scroll so lazy-loaded sections mount before the full-page shot.
         page.evaluate(
@@ -74,7 +90,12 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
         section_bounds = _detect_section_bounds(page)
         total_height_css: int = page.evaluate("document.body.scrollHeight")
 
-        page.screenshot(path=str(fullpage_path), full_page=True)
+        page.screenshot(
+            path=str(fullpage_path),
+            full_page=True,
+            animations="disabled",
+            timeout=SCREENSHOT_TIMEOUT_MS,
+        )
         browser.close()
 
     crops = _slice_fullpage(
