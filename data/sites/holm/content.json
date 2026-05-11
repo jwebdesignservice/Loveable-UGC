@@ -1,0 +1,28 @@
+{
+  "carousels": [
+    {
+      "pillar": "site-previews",
+      "hook": "i built this with lovable in 3 days.",
+      "caption": "holm is a skincare site i made for fun. lovable did the heavy lifting — one prompt and a few tweaks. ",
+      "hashtags": ["#lovable", "#webdesign", "#buildinpublic", "#skincare"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "lovable made this from one prompt.",
+      "caption": "told it: scandinavian skincare brand, cream and sage palette, quiet typography. this is what came back.",
+      "hashtags": ["#lovable", "#aitools", "#nocode", "#designinspo"]
+    },
+    {
+      "pillar": "site-previews",
+      "hook": "this looks like an agency made it. it didn't.",
+      "caption": "lovable. one prompt. zero designers. the scroll animations alone go hard.",
+      "hashtags": ["#lovable", "#webdesign", "#aitools"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "11 words. one full site.",
+      "caption": "the entire prompt fits in 11 words. lovable filled in the rest.",
+      "hashtags": ["#lovable", "#vibecoding", "#indiehackers", "#design"]
+    }
+  ]
+}
