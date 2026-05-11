@@ -1,0 +1,305 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Carousel mockups</title>
+<style>
+  :root {
+    --bg: #ece8e1;
+    --paper: #f5f1ea;
+    --ink: #111;
+    --muted: #6b6660;
+    --accent: #d94a2c;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--ink); }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    padding: 48px 24px 96px;
+  }
+  h1 {
+    font-size: 18px; font-weight: 600; letter-spacing: -0.01em;
+    margin: 0 0 4px;
+  }
+  .lead {
+    color: var(--muted); font-size: 14px; max-width: 720px; margin: 0 0 36px;
+  }
+  .carousel {
+    margin: 0 auto 56px;
+    max-width: 1280px;
+  }
+  .carousel-label {
+    font-size: 13px;
+    color: var(--muted);
+    margin: 0 8px 14px;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+  }
+  .slides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 18px;
+  }
+  .slide {
+    aspect-ratio: 4 / 5;
+    background: var(--paper);
+    border-radius: 14px;
+    padding: 28px;
+    display: flex;
+    flex-direction: column;
+    position: relative;
+    overflow: hidden;
+    box-shadow: 0 1px 0 rgba(0,0,0,0.04), 0 12px 32px -16px rgba(0,0,0,0.18);
+  }
+  .slide .num {
+    position: absolute;
+    top: 16px; right: 18px;
+    font-size: 12px; color: var(--muted);
+    font-variant-numeric: tabular-nums;
+  }
+  .slide h2 {
+    font-size: 26px;
+    line-height: 1.15;
+    font-weight: 600;
+    letter-spacing: -0.015em;
+    margin: 0 0 14px;
+  }
+  .slide .sub { font-size: 14px; color: var(--muted); margin: 0 0 14px; line-height: 1.4; }
+  .slide .body { font-size: 15px; line-height: 1.45; margin: 0 0 14px; }
+  .slide .small { font-size: 12px; color: var(--muted); margin-top: auto; }
+
+  /* fake site preview block */
+  .preview {
+    flex: 1;
+    border-radius: 10px;
+    background: #1a1a1a;
+    color: #eee;
+    padding: 18px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    position: relative;
+  }
+  .preview .topbar { display: flex; gap: 6px; margin-bottom: 14px; }
+  .preview .topbar span { width: 9px; height: 9px; border-radius: 50%; background: #444; }
+  .preview h3 {
+    font-size: 17px; margin: 0 0 8px; font-weight: 600; letter-spacing: -0.01em;
+  }
+  .preview p { font-size: 11px; color: #999; margin: 0 0 14px; line-height: 1.4; }
+  .preview .pill {
+    align-self: flex-start;
+    background: #fff; color: #111;
+    padding: 6px 12px;
+    border-radius: 999px;
+    font-size: 11px; font-weight: 500;
+    margin-bottom: 14px;
+  }
+  .preview .grid-2 {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: auto;
+  }
+  .preview .grid-2 > div { background: #2a2a2a; height: 36px; border-radius: 6px; }
+
+  /* ugly "before" preview */
+  .preview.before {
+    background: #ddd; color: #333; font-family: "Times New Roman", serif;
+  }
+  .preview.before .topbar span { background: #aaa; }
+  .preview.before h3 {
+    color: #00f; text-decoration: underline; font-weight: 700;
+  }
+  .preview.before p { color: #555; }
+  .preview.before .pill { background: #ff0; color: #000; border: 1px solid #c00; }
+  .preview.before .grid-2 > div { background: #c0c0c0; }
+
+  /* warm "after" preview */
+  .preview.warm {
+    background: #f3ece1; color: #1a1a1a;
+  }
+  .preview.warm .topbar span { background: #d4ccc0; }
+  .preview.warm p { color: #5a534b; }
+  .preview.warm .pill { background: #111; color: #fff; }
+  .preview.warm .grid-2 > div { background: #e6ddcd; }
+
+  /* prompt slide */
+  .prompt-card {
+    flex: 1;
+    background: #fff;
+    border-radius: 10px;
+    padding: 22px;
+    font-family: ui-monospace, "SF Mono", Menlo, monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+  }
+  .prompt-card .lbl {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    font-size: 11px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted);
+    margin-bottom: 12px;
+  }
+  .prompt-card .cursor::after {
+    content: "▍"; color: #999; margin-left: 2px;
+  }
+
+  /* slide variants */
+  .slide.dark { background: #161513; color: #f1ede5; }
+  .slide.dark .sub, .slide.dark .small { color: #8c867d; }
+
+  .annotation {
+    position: absolute;
+    bottom: 18px; right: 22px;
+    font-family: "Brush Script MT", "Comic Sans MS", cursive;
+    font-size: 16px;
+    color: var(--accent);
+    transform: rotate(-3deg);
+  }
+
+  .strike { text-decoration: line-through; text-decoration-color: var(--accent); text-decoration-thickness: 2px; }
+
+  .footer {
+    max-width: 720px; margin: 80px auto 0; color: var(--muted); font-size: 13px; line-height: 1.5;
+  }
+  .footer code { background: #ddd6c8; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+
+<div style="max-width:1280px;margin:0 auto;">
+  <h1>Carousel mockups — Lovable UGC</h1>
+  <p class="lead">Three sample carousels, three different pillars. Type is system sans (looks like an iPhone note), backgrounds are warm off-white so they feel hand-made instead of designed. Real screenshots will replace the placeholder previews when this runs against your <code style="background:#ddd6c8;padding:1px 5px;border-radius:4px;font-size:12px;">past-work</code> folder.</p>
+</div>
+
+<!-- Carousel 1 -->
+<section class="carousel">
+  <div class="carousel-label">Carousel 1 · one-shot-revamp · 3 slides</div>
+  <div class="slides">
+
+    <div class="slide">
+      <span class="num">1 / 3</span>
+      <h2>this homepage is rough.</h2>
+      <p class="sub">found this in the wild today</p>
+      <div class="preview before">
+        <div class="topbar"><span></span><span></span><span></span></div>
+        <h3>Welcome to Joe's Plumbing!!!</h3>
+        <p>We are the best plumbers in town. Click here for quote. Family owned since 1987.</p>
+        <div class="pill">CLICK HERE NOW</div>
+        <div class="grid-2"><div></div><div></div></div>
+      </div>
+      <span class="annotation">yikes</span>
+    </div>
+
+    <div class="slide">
+      <span class="num">2 / 3</span>
+      <h2>one prompt in lovable.</h2>
+      <p class="sub">no figma, no code</p>
+      <div class="preview warm">
+        <div class="topbar"><span></span><span></span><span></span></div>
+        <h3>Joe's Plumbing</h3>
+        <p>Family-owned. Same-day service across the city since 1987. Honest quotes, no surprises.</p>
+        <div class="pill">Book a visit</div>
+        <div class="grid-2"><div></div><div></div></div>
+      </div>
+    </div>
+
+    <div class="slide">
+      <span class="num">3 / 3</span>
+      <h2>4 minutes. that's it.</h2>
+      <p class="body">lovable wrote every line of this site. i just told it what the business does.</p>
+      <p class="small">comment "revamp" if you want yours done →</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Carousel 2 -->
+<section class="carousel">
+  <div class="carousel-label">Carousel 2 · one-prompt-site · 4 slides</div>
+  <div class="slides">
+
+    <div class="slide">
+      <span class="num">1 / 4</span>
+      <h2>I gave lovable 18 words.</h2>
+      <p class="sub">this is what came back ↓</p>
+    </div>
+
+    <div class="slide">
+      <span class="num">2 / 4</span>
+      <div class="prompt-card">
+        <div class="lbl">the prompt</div>
+        <div>dark editorial landing page for an AI scheduling tool. one hero, three features, pricing, FAQ.<span class="cursor"></span></div>
+      </div>
+    </div>
+
+    <div class="slide">
+      <span class="num">3 / 4</span>
+      <div class="preview">
+        <div class="topbar"><span></span><span></span><span></span></div>
+        <div class="pill">v1.0 — out now</div>
+        <h3>Stop scheduling. Start showing up.</h3>
+        <p>The AI that books your week so you don't have to. Reads your calendar, talks to your contacts, gets it done.</p>
+        <div class="grid-2"><div></div><div></div></div>
+      </div>
+    </div>
+
+    <div class="slide dark">
+      <span class="num">4 / 4</span>
+      <h2>steal the prompt.</h2>
+      <p class="sub">save this for the next site you build</p>
+      <p class="small">following for more @ →</p>
+    </div>
+
+  </div>
+</section>
+
+<!-- Carousel 3 -->
+<section class="carousel">
+  <div class="carousel-label">Carousel 3 · common-mistakes · 3 slides</div>
+  <div class="slides">
+
+    <div class="slide">
+      <span class="num">1 / 3</span>
+      <h2>everyone using lovable does this.</h2>
+      <p class="sub">and it's why every site looks the same</p>
+      <div class="preview">
+        <div class="topbar"><span></span><span></span><span></span></div>
+        <h3>Build faster. Ship better.</h3>
+        <p>The all-in-one platform for modern teams who want to move quickly and grow without limits.</p>
+        <div class="pill">Get started free</div>
+        <div class="grid-2"><div></div><div></div></div>
+      </div>
+      <span class="annotation">generic ↑</span>
+    </div>
+
+    <div class="slide">
+      <span class="num">2 / 3</span>
+      <h2>do this instead.</h2>
+      <p class="body"><span class="strike">"build faster, ship better"</span><br>↓<br>say what the thing actually <em>is</em>.</p>
+      <p class="small">specificity &gt; vibes.</p>
+    </div>
+
+    <div class="slide">
+      <span class="num">3 / 3</span>
+      <h2>add this to every prompt:</h2>
+      <div class="prompt-card">
+        <div class="lbl">copy / paste</div>
+        <div>"the hero headline must name the exact product and who it's for. no buzzwords, no 'build faster' style copy."<span class="cursor"></span></div>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<div class="footer">
+  <strong>Notes on the style</strong><br>
+  · system sans only, no display fonts<br>
+  · off-white paper background — feels like a note app, not a designed asset<br>
+  · text is conversational (lowercase, casual), no marketing speak<br>
+  · slide numbers in the corner (1/3, 2/3…) so people know to swipe<br>
+  · one handwritten-style annotation per carousel, sparingly<br>
+  · the dark "preview" boxes will be replaced with real screenshots from your <code>past-work</code> folder<br><br>
+  Open this file in a browser to see them. Tell me what to change — tone, layout, font weight, whether the handwriting bits feel right or too much.
+</div>
+
+</body>
+</html>
