@@ -17,6 +17,8 @@ from dotenv import load_dotenv
 
 from . import content as content_mod
 from . import lovable as lovable_mod
+from . import niches as niches_mod
+from . import prompts as prompts_mod
 from . import screenshots as screenshots_mod
 from . import state as state_mod
 from .config import (CAROUSELS_DIR, SITES_DIR, SIZE_1X1, SIZE_9X16,
@@ -222,6 +224,116 @@ def render_comparison_cmd(before_site: str, after_site: str, hook: str,
         click.echo(f"{ratio}:")
         for p in paths:
             click.echo(f"  {p}")
+
+
+@cli.command("next-prompt")
+@click.option("--niche", default=None,
+              help="Niche key (e.g. property, skincare). Auto-picks from catalog if omitted.")
+@click.option("--brand", default=None,
+              help="Brand name override. Defaults to catalog entry.")
+@click.option("--extra-notes", default=None,
+              help="Free-text additions appended to the prompt.")
+def next_prompt(niche: str | None, brand: str | None,
+                extra_notes: str | None) -> None:
+    """Print a fully-detailed Lovable prompt for the next design.
+
+    Auto-picks from the niche catalog if --niche is not supplied,
+    skipping niches that already have a folder under data/sites/.
+    """
+    if niche is None or brand is None:
+        used = [p.name for p in SITES_DIR.iterdir()
+                if SITES_DIR.exists() and p.is_dir() and p.name != ".gitkeep"]
+        pick = niches_mod.next_niche(used_slugs=used)
+        niche = niche or pick.niche
+        brand = brand or pick.brand
+
+    click.echo(prompts_mod.build_prompt(niche=niche, brand=brand,
+                                        extra_notes=extra_notes))
+
+
+@cli.command("auto")
+@click.option("--n", default=4, type=int,
+              help="Carousels to render per site.")
+def auto(n: int) -> None:
+    """Render carousels for every site in data/sites/ that doesn't already
+    have a carousel folder. Skips ugly/before sites (folders ending -before)."""
+    ensure_dirs()
+    if not SITES_DIR.exists():
+        click.echo("No data/sites/ directory yet."); return
+
+    site_dirs = [d for d in SITES_DIR.iterdir()
+                 if d.is_dir() and not d.name.endswith("-before")
+                 and not d.name.startswith(".")]
+    if not site_dirs:
+        click.echo("No sites found in data/sites/."); return
+
+    state = state_mod.load()
+    rendered_any = False
+
+    for site_dir in sorted(site_dirs):
+        slug = site_dir.name
+        existing = [c for c in state.carousels if c.design_id == slug]
+        if existing:
+            click.echo(f"[skip] {slug} already has {len(existing)} carousels")
+            continue
+        shots = sorted(site_dir.glob("*.png"))
+        if not shots:
+            click.echo(f"[skip] {slug} has no screenshots"); continue
+
+        nb = next((nb for nb in niches_mod.CATALOG
+                   if niches_mod.slug_for(nb) == slug), None)
+        brand = nb.brand if nb else slug.replace("-", " ").title()
+        niche = nb.niche if nb else "modern brand"
+
+        if content_mod.have_api_key():
+            scripts = content_mod.generate_carousels(
+                niche=niche, brand=brand,
+                description=f"Lovable-built site for {brand}.",
+                prompt=prompts_mod.build_prompt(niche=niche, brand=brand),
+                url="", n=n,
+            )
+        else:
+            click.echo("(no ANTHROPIC_API_KEY — using stub scripts)", err=True)
+            scripts = content_mod.stub_carousels(n=n)
+
+        click.echo(f"\n{slug}: {len(scripts)} carousels")
+        for i, s in enumerate(scripts, start=1):
+            cname = f"{slug}-{i:02d}-{s.pillar}"
+            click.echo(f"  [{i}] {s.hook}")
+            written = render_carousel(hook=s.hook, screenshots=shots,
+                                      out_dir=CAROUSELS_DIR / cname)
+            state.carousels.append(state_mod.Carousel(
+                id=cname, design_id=slug, pillar=s.pillar,
+                hook=s.hook, caption=s.caption, hashtags=s.hashtags,
+                slide_paths=[p for paths in written.values() for p in paths],
+            ))
+            rendered_any = True
+
+        before_slug = f"{slug}-before"
+        before_dir = SITES_DIR / before_slug
+        if before_dir.exists() and list(before_dir.glob("*.png")):
+            before_shot = sorted(before_dir.glob("*.png"))[0]
+            revamp_hook = f"rebuilt this in lovable. one prompt."
+            cname = f"{slug}-revamp"
+            click.echo(f"  [revamp] {revamp_hook}")
+            written = render_comparison_carousel(
+                hook=revamp_hook, before=before_shot,
+                after_screenshots=shots,
+                out_dir=CAROUSELS_DIR / cname,
+            )
+            state.carousels.append(state_mod.Carousel(
+                id=cname, design_id=slug, pillar="one-shot-revamp",
+                hook=revamp_hook,
+                caption=f"one prompt in lovable turned the old {brand} site into this.",
+                hashtags=["#lovable", "#webdesign", "#revamp"],
+                slide_paths=[p for paths in written.values() for p in paths],
+            ))
+
+    state_mod.save(state)
+    if not rendered_any:
+        click.echo("\nNothing to render. Add a new site under data/sites/<slug>/")
+    else:
+        click.echo(f"\nState updated. {len(state.carousels)} carousels total.")
 
 
 @cli.group()
