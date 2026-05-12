@@ -30,6 +30,13 @@ SCROLL_DWELL_S = 0.8
 PRE_SCROLL_DWELL_S = 0.6
 TARGET_CHUNK_SIZE = 3
 
+# Sites with scroll-scrub sections (pinned elements + GSAP ScrollTrigger,
+# Lenis-driven parallax, etc.) report a `body.scrollHeight` that includes
+# thousands of pixels of empty "runway" — scroll distance used to drive
+# animations on a single pinned element. We cap each detected section so
+# the resulting crops show actual content, not blank runway.
+MAX_SECTION_RUN_PX = VIEWPORT_H + VIEWPORT_H // 2  # 2880 CSS px
+
 
 def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
     """Capture full-page + hero + grouped section PNGs from ``preview_url``.
@@ -93,10 +100,19 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
         time.sleep(0.5)
 
         section_bounds = _detect_section_bounds(page)
-        total_height_css: int = page.evaluate(
+        scroll_height_css: int = page.evaluate(
             "document.body.scrollHeight") or 0
+        content_bottom_css: int = _detect_content_bottom(page)
+        # Stitch the whole scrollable area so scroll-scrub animations get
+        # captured wherever they land, then trim to the last bit of real
+        # content so the saved PNG isn't 95 % empty maroon.
+        effective_height_css = max(
+            content_bottom_css, VIEWPORT_H)
 
-        full_img = _stitched_fullpage_capture(page, total_height_css)
+        full_img = _stitched_fullpage_capture(page, scroll_height_css)
+        if effective_height_css * 2 < full_img.height:
+            full_img = full_img.crop(
+                (0, 0, full_img.width, effective_height_css * 2))
         full_img.save(fullpage_path, optimize=True)
         browser.close()
 
@@ -104,9 +120,44 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
         fullpage_path=fullpage_path,
         out_dir=out_dir,
         section_bounds=section_bounds,
-        total_height_css=total_height_css,
+        total_height_css=effective_height_css,
     )
     return [fullpage_path, *crops]
+
+
+def _detect_content_bottom(page) -> int:
+    """Y coordinate (CSS px) of the bottom of the last real content element.
+
+    Walks the DOM, ignores empty wrappers and zero-size elements, and
+    returns the largest `top + height` it finds. Used to trim the
+    scroll-runway off the saved full-page screenshot.
+    """
+    return page.evaluate(
+        """() => {
+            let lastBottom = 0;
+            const els = document.querySelectorAll('*');
+            for (const el of els) {
+                const rect = el.getBoundingClientRect();
+                if (rect.width < 16 || rect.height < 16) continue;
+                const tag = el.tagName;
+                const hasOwnText = (() => {
+                    if (el.children.length > 0) return false;
+                    const t = (el.textContent || '').trim();
+                    return t.length > 1;
+                })();
+                const isMedia = (
+                    tag === 'IMG' || tag === 'SVG' || tag === 'VIDEO' ||
+                    tag === 'CANVAS' || tag === 'PICTURE'
+                );
+                const hasBgImage = (
+                    getComputedStyle(el).backgroundImage !== 'none');
+                if (!(hasOwnText || isMedia || hasBgImage)) continue;
+                const bottom = rect.bottom + window.scrollY;
+                if (bottom > lastBottom) lastBottom = bottom;
+            }
+            return Math.round(lastBottom);
+        }"""
+    ) or 0
 
 
 def _stitched_fullpage_capture(page, total_height_css: int) -> Image.Image:
@@ -205,6 +256,10 @@ def _slots_from_sections(sections: list[dict], total_h: int
     """Hero solo first; then 2-3-section groups. The last group extends to
     the page bottom so the footer rides along even if it lives outside the
     final ``<section>``."""
+    sections = [
+        {**s, "height": min(s["height"], MAX_SECTION_RUN_PX)}
+        for s in sections
+    ]
     hero = sections[0]
     rest = sections[1:]
     slots: list[tuple[str, int, int]] = [
