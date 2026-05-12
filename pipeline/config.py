@@ -1,9 +1,16 @@
 """Paths, sizes, and tunables shared across the pipeline."""
+import os
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
-DATA_DIR = ROOT / "data"
-SITES_DIR = DATA_DIR / "site-previews"
+
+# Where rendered carousels and screenshots live.
+# Default: Windows Desktop\Loveable-UGC (browseable in Explorer).
+# Override with the LOVEABLE_UGC_DIR env var if you need a different location.
+_DEFAULT_OUTPUT = Path("/mnt/c/Users/Jack/Desktop/Loveable-UGC")
+DATA_DIR = Path(os.environ.get("LOVEABLE_UGC_DIR", str(_DEFAULT_OUTPUT)))
+
+SITES_DIR = DATA_DIR / "screenshots"
 CAROUSELS_DIR = DATA_DIR / "carousels"
 ASSETS_DIR = ROOT / "assets"
 STATE_FILE = DATA_DIR / "state.json"
