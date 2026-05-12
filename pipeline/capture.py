@@ -14,6 +14,7 @@ animation state consistent across crops and avoids re-scroll artifacts.
 """
 from __future__ import annotations
 
+import io
 import math
 import time
 from pathlib import Path
@@ -23,8 +24,10 @@ from PIL import Image
 VIEWPORT_W = 1080
 VIEWPORT_H = 1920
 NAV_TIMEOUT_MS = 60_000
-SCREENSHOT_TIMEOUT_MS = 120_000
+VIEWPORT_SCREENSHOT_TIMEOUT_MS = 30_000
 SETTLE_AFTER_LOAD_S = 2.0
+SCROLL_DWELL_S = 0.8
+PRE_SCROLL_DWELL_S = 0.6
 TARGET_CHUNK_SIZE = 3
 
 
@@ -62,8 +65,9 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
             pass  # Lovable previews sometimes keep a socket open forever
         time.sleep(SETTLE_AFTER_LOAD_S)
 
-        # Kill animations/transitions so the full-page screenshot doesn't
-        # wait forever for a scroll-driven element to settle.
+        # Soft-kill CSS animations/transitions so we don't get caught
+        # mid-transition. JS-driven reveal animations (framer-motion, GSAP)
+        # are still triggered naturally by the scroll loop below.
         page.add_style_tag(content="""
             *, *::before, *::after {
                 animation-duration: 0s !important;
@@ -73,29 +77,27 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
             }
         """)
 
-        # Pre-scroll so lazy-loaded sections mount before the full-page shot.
+        # Pre-scroll once to mount lazy content and fire IntersectionObserver
+        # callbacks (whileInView, ScrollTrigger, etc.) for every section.
         page.evaluate(
-            """async () => {
+            f"""async () => {{
                 const step = window.innerHeight;
                 const total = document.body.scrollHeight;
-                for (let y = 0; y < total; y += step) {
-                    window.scrollTo({top: y, behavior: 'instant'});
-                    await new Promise(r => setTimeout(r, 250));
-                }
-                window.scrollTo({top: 0, behavior: 'instant'});
-            }"""
+                for (let y = 0; y < total; y += step) {{
+                    window.scrollTo({{top: y, behavior: 'instant'}});
+                    await new Promise(r => setTimeout(
+                        r, {int(PRE_SCROLL_DWELL_S * 1000)}));
+                }}
+            }}"""
         )
         time.sleep(0.5)
 
         section_bounds = _detect_section_bounds(page)
-        total_height_css: int = page.evaluate("document.body.scrollHeight")
+        total_height_css: int = page.evaluate(
+            "document.body.scrollHeight") or 0
 
-        page.screenshot(
-            path=str(fullpage_path),
-            full_page=True,
-            animations="disabled",
-            timeout=SCREENSHOT_TIMEOUT_MS,
-        )
+        full_img = _stitched_fullpage_capture(page, total_height_css)
+        full_img.save(fullpage_path, optimize=True)
         browser.close()
 
     crops = _slice_fullpage(
@@ -105,6 +107,46 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
         total_height_css=total_height_css,
     )
     return [fullpage_path, *crops]
+
+
+def _stitched_fullpage_capture(page, total_height_css: int) -> Image.Image:
+    """Scroll viewport-by-viewport, screenshot each, stitch in PIL.
+
+    Bypasses Playwright's ``full_page=True`` because that path doesn't
+    play nicely with JS-driven scroll reveal libraries (framer-motion,
+    GSAP ScrollTrigger). Manually scrolling and dwelling at each
+    position lets each section fade in before its capture.
+    """
+    if total_height_css <= 0:
+        return Image.new(
+            "RGB", (VIEWPORT_W * 2, VIEWPORT_H * 2), (255, 255, 255))
+
+    positions: list[int] = []
+    y = 0
+    while y < total_height_css:
+        positions.append(y)
+        y += VIEWPORT_H
+    bottom_y = max(0, total_height_css - VIEWPORT_H)
+    if positions and positions[-1] < bottom_y:
+        positions.append(bottom_y)
+
+    img_w = VIEWPORT_W * 2
+    img_h = max(VIEWPORT_H, total_height_css) * 2
+    full = Image.new("RGB", (img_w, img_h), (255, 255, 255))
+
+    for css_y in positions:
+        page.evaluate(
+            "(y) => window.scrollTo({top: y, behavior: 'instant'})", css_y
+        )
+        time.sleep(SCROLL_DWELL_S)
+        png_bytes = page.screenshot(
+            full_page=False,
+            timeout=VIEWPORT_SCREENSHOT_TIMEOUT_MS,
+        )
+        chunk = Image.open(io.BytesIO(png_bytes))
+        full.paste(chunk, (0, css_y * 2))
+
+    return full
 
 
 def _detect_section_bounds(page) -> list[dict]:
