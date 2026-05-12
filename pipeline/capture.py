@@ -34,8 +34,9 @@ TARGET_CHUNK_SIZE = 3
 # Lenis-driven parallax, etc.) report a `body.scrollHeight` that includes
 # thousands of pixels of empty "runway" — scroll distance used to drive
 # animations on a single pinned element. We cap each detected section so
-# the resulting crops show actual content, not blank runway.
-MAX_SECTION_RUN_PX = VIEWPORT_H + VIEWPORT_H // 2  # 2880 CSS px
+# the resulting crops show actual content, not blank runway. One viewport
+# is what the section is intended to look like for a first-time visitor.
+MAX_SECTION_RUN_PX = VIEWPORT_H
 
 
 def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
