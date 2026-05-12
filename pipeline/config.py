@@ -1,5 +1,6 @@
 """Paths, sizes, and tunables shared across the pipeline."""
 import os
+import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -7,7 +8,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # Where rendered carousels and screenshots live.
 # Default: Windows Desktop\Loveable-UGC (browseable in Explorer).
 # Override with the LOVEABLE_UGC_DIR env var if you need a different location.
-_DEFAULT_OUTPUT = Path("/mnt/c/Users/Jack/Desktop/Loveable-UGC")
+if sys.platform == "win32":
+    _DEFAULT_OUTPUT = Path(r"C:\Users\Jack\Desktop\Loveable-UGC")
+else:
+    _DEFAULT_OUTPUT = Path("/mnt/c/Users/Jack/Desktop/Loveable-UGC")
 DATA_DIR = Path(os.environ.get("LOVEABLE_UGC_DIR", str(_DEFAULT_OUTPUT)))
 
 SITES_DIR = DATA_DIR / "screenshots"
@@ -24,9 +28,15 @@ MUTED = (107, 102, 96)
 PILL_BG = (17, 17, 17)
 PILL_FG = (255, 255, 255)
 
-FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
-FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
-FONT_MONO = "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf"
+# System font fallbacks — Windows uses Arial / Consolas, Linux uses Liberation.
+if sys.platform == "win32":
+    FONT_REG = r"C:\Windows\Fonts\arial.ttf"
+    FONT_BOLD = r"C:\Windows\Fonts\arialbd.ttf"
+    FONT_MONO = r"C:\Windows\Fonts\consola.ttf"
+else:
+    FONT_REG = "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf"
+    FONT_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf"
+    FONT_MONO = "/usr/share/fonts/truetype/liberation/LiberationMono-Regular.ttf"
 
 CAROUSELS_PER_DESIGN = 12
 PILLARS = ["site-previews", "one-prompt-site", "one-shot-revamp",

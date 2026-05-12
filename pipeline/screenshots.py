@@ -257,8 +257,13 @@ def make_placeholder_site(out_dir: Path, brand: str = "Auréa") -> list[Path]:
 # ---------------------------------------------------------------- ugly sites
 
 
-FONT_SERIF = "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"
-FONT_SERIF_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"
+import sys as _sys
+if _sys.platform == "win32":
+    FONT_SERIF = r"C:\Windows\Fonts\times.ttf"
+    FONT_SERIF_BOLD = r"C:\Windows\Fonts\timesbd.ttf"
+else:
+    FONT_SERIF = "/usr/share/fonts/truetype/liberation/LiberationSerif-Regular.ttf"
+    FONT_SERIF_BOLD = "/usr/share/fonts/truetype/liberation/LiberationSerif-Bold.ttf"
 
 
 def _ugly_font(size: int, *, bold: bool = False, serif: bool = True
