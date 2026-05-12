@@ -116,6 +116,56 @@ def capture(url: str, site: str) -> None:
         click.echo(f"  {p}")
 
 
+@cli.command()
+@click.option("--input", "input_dir", required=True,
+              help="Folder containing images to stitch (sorted by filename).")
+@click.option("--output", "output_path", required=True,
+              help="Output PNG path.")
+@click.option("--width", default=None, type=int,
+              help="Target width in px. Defaults to the narrowest input.")
+def stitch(input_dir: str, output_path: str, width: int | None) -> None:
+    """Stitch images vertically into one tall PNG.
+
+    The manual fallback for sites where the automated `capture` command
+    fights scroll-scrub animations. Save your browser screenshots into a
+    folder with sortable names (01-hero.png, 02-food.png, ...) and run
+    this command.
+    """
+    from PIL import Image
+
+    in_dir = Path(input_dir)
+    images_in = sorted(
+        list(in_dir.glob("*.png")) + list(in_dir.glob("*.jpg"))
+        + list(in_dir.glob("*.jpeg")) + list(in_dir.glob("*.webp"))
+    )
+    if not images_in:
+        raise click.ClickException(f"No images found in {in_dir}")
+
+    imgs = [Image.open(p).convert("RGB") for p in images_in]
+    target_w = width or min(img.width for img in imgs)
+
+    resized: list = []
+    for img in imgs:
+        if img.width != target_w:
+            new_h = int(img.height * (target_w / img.width))
+            img = img.resize((target_w, new_h), Image.LANCZOS)
+        resized.append(img)
+
+    total_h = sum(img.height for img in resized)
+    stitched = Image.new("RGB", (target_w, total_h), (255, 255, 255))
+    y = 0
+    for img in resized:
+        stitched.paste(img, (0, y))
+        y += img.height
+
+    out = Path(output_path)
+    out.parent.mkdir(parents=True, exist_ok=True)
+    stitched.save(out, optimize=True)
+    click.echo(f"Wrote {out} ({target_w}x{total_h})")
+    for p in images_in:
+        click.echo(f"  + {p}")
+
+
 @cli.command("ugly-site")
 @click.option("--site", required=True, help="Site slug under data/site-previews/")
 @click.option("--brand", required=True, help="Brand name to render.")
