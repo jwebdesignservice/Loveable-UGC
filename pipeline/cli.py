@@ -87,7 +87,7 @@ def next_prompt(niche: str | None, brand: str | None,
 @click.option("--site", default="aurea-demo", help="Site slug.")
 @click.option("--brand", default="Auréa", help="Brand name to render.")
 def placeholders(site: str, brand: str) -> None:
-    """Write fake-but-realistic site screenshots into data/sites/<site>/."""
+    """Write fake-but-realistic site screenshots into data/site-previews/<site>/."""
     ensure_dirs()
     out = SITES_DIR / site
     paths = screenshots_mod.make_placeholder_site(out, brand=brand)
@@ -100,7 +100,7 @@ def placeholders(site: str, brand: str) -> None:
 @click.option("--url", required=True,
               help="Lovable preview URL (e.g. https://sable-restaurant.lovable.app).")
 @click.option("--site", required=True,
-              help="Slug; screenshots saved to data/sites/<slug>/.")
+              help="Slug; screenshots saved to data/site-previews/<slug>/.")
 def capture(url: str, site: str) -> None:
     """Capture four section screenshots from a Lovable preview URL.
 
@@ -117,7 +117,7 @@ def capture(url: str, site: str) -> None:
 
 
 @cli.command("ugly-site")
-@click.option("--site", required=True, help="Site slug under data/sites/")
+@click.option("--site", required=True, help="Site slug under data/site-previews/")
 @click.option("--brand", required=True, help="Brand name to render.")
 @click.option("--tagline", default="Your one-stop online destination.")
 def ugly_site(site: str, brand: str, tagline: str) -> None:
@@ -134,7 +134,7 @@ def ugly_site(site: str, brand: str, tagline: str) -> None:
 
 
 @cli.command()
-@click.option("--site", required=True, help="Site slug under data/sites/")
+@click.option("--site", required=True, help="Site slug under data/site-previews/")
 @click.option("--hook", required=True, help="Hook text for slide 1.")
 @click.option("--carousel", "carousel_name", required=True,
               help="Output folder name under data/carousels/")
@@ -166,9 +166,9 @@ def render(site: str, hook: str, carousel_name: str, ratios: str) -> None:
 
 @cli.command("render-batch")
 @click.option("--site", required=True,
-              help="Site slug under data/sites/")
+              help="Site slug under data/site-previews/")
 @click.option("--content", "content_path", default=None,
-              help="Path to JSON with carousels. Defaults to data/sites/<slug>/content.json")
+              help="Path to JSON with carousels. Defaults to data/site-previews/<slug>/content.json")
 def render_batch(site: str, content_path: str | None) -> None:
     """Render every carousel listed in a content JSON file for one site.
 
@@ -236,9 +236,9 @@ def render_batch(site: str, content_path: str | None) -> None:
 
 @cli.command("render-comparison")
 @click.option("--before-site", required=True,
-              help="Slug under data/sites/ for the BEFORE site.")
+              help="Slug under data/site-previews/ for the BEFORE site.")
 @click.option("--after-site", required=True,
-              help="Slug under data/sites/ for the AFTER site.")
+              help="Slug under data/site-previews/ for the AFTER site.")
 @click.option("--hook", required=True)
 @click.option("--carousel", "carousel_name", required=True)
 def render_comparison_cmd(before_site: str, after_site: str, hook: str,

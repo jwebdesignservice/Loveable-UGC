@@ -57,7 +57,7 @@ The orchestrator (`.claude/commands/go.md`) takes it from there.
 | `python -m pipeline next-prompt --niche X --brand "Y"` | Build a detailed Lovable prompt |
 | `python -m pipeline placeholders --site X --brand "Y"` | Generate fake site screenshots (test only) |
 | `python -m pipeline ugly-site --site X-before --brand "Y"` | Generate a dated BEFORE site for revamp carousels |
-| `python -m pipeline render-batch --site X` | Render every carousel listed in `data/sites/X/content.json` |
+| `python -m pipeline render-batch --site X` | Render every carousel listed in `data/site-previews/X/content.json` |
 | `python -m pipeline render-comparison --before-site X-before --after-site X --hook "..." --carousel name` | Render one BEFORE/AFTER carousel |
 | `python -m pipeline demo` | Offline smoke test (stub content + placeholders) |
 
@@ -98,7 +98,7 @@ docs/
 | --- | --- |
 | `data/state.json` | All designs (Lovable builds) and carousels rendered |
 | `data/last-advisor-review.json` | Most recent advisor verdicts |
-| `data/sites/<slug>/content.json` | Carousel scripts for one design |
+| `data/site-previews/<slug>/content.json` | Carousel scripts for one design |
 
 ## Scheduling (Windows)
 

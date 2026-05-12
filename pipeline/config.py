@@ -3,7 +3,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DATA_DIR = ROOT / "data"
-SITES_DIR = DATA_DIR / "sites"
+SITES_DIR = DATA_DIR / "site-previews"
 CAROUSELS_DIR = DATA_DIR / "carousels"
 ASSETS_DIR = ROOT / "assets"
 STATE_FILE = DATA_DIR / "state.json"

@@ -19,7 +19,7 @@ python -m pipeline next-prompt --json
 ```
 
 This calls Claude to invent:
-- a niche that contrasts with what's already in `data/sites/`
+- a niche that contrasts with what's already in `data/site-previews/`
 - a fresh brand name
 - a tagline
 - the full detailed Lovable prompt (heavy on scroll animations, custom
@@ -58,13 +58,13 @@ Stop after 1-2 rounds. If it still doesn't land, restart from step 1.
 
 ## Step 4 — Capture screenshots
 
-Save 4-6 PNGs into `data/sites/<slug>/`:
+Save 4-6 PNGs into `data/site-previews/<slug>/`:
 
 ```
-data/sites/<slug>/01-hero.png
-data/sites/<slug>/02-features.png
-data/sites/<slug>/03-testimonials.png
-data/sites/<slug>/04-footer.png
+data/site-previews/<slug>/01-hero.png
+data/site-previews/<slug>/02-features.png
+data/site-previews/<slug>/03-testimonials.png
+data/site-previews/<slug>/04-footer.png
 ```
 
 **Option A** — call `mcp__lovable__get_project` repeatedly while sending
@@ -83,7 +83,7 @@ For a one-shot-revamp carousel:
 python -m pipeline ugly-site --site <slug>-before --brand "<Brand>"
 ```
 
-Writes a deliberately 2005-era site to `data/sites/<slug>-before/`.
+Writes a deliberately 2005-era site to `data/site-previews/<slug>-before/`.
 
 ## Step 6 — Render the carousels
 
@@ -99,7 +99,7 @@ Output lands in `data/carousels/<carousel-name>/{1080x1920,1080x1080}/`.
 ## Step 7 — Commit + push
 
 ```bash
-git add data/sites data/carousels
+git add data/site-previews data/carousels
 git commit -m "Add <brand> site + carousels"
 git push origin claude/add-powershell-setup-script-tN8lz
 ```

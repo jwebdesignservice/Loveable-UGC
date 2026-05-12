@@ -13,9 +13,9 @@ You think for yourself. Don't ask the user. Don't ask the orchestrator.
 
 When you're done, the orchestrator expects:
 
-1. `data/sites/<slug>/01-hero.png` … `04-footer.png` — four section screenshots
-2. `data/sites/<slug>-before/` — a generated dated BEFORE site (for revamp content)
-3. `data/sites/<slug>/content.json` — N carousel scripts (hook, caption, hashtags)
+1. `data/site-previews/<slug>/01-hero.png` … `04-footer.png` — four section screenshots
+2. `data/site-previews/<slug>-before/` — a generated dated BEFORE site (for revamp content)
+3. `data/site-previews/<slug>/content.json` — N carousel scripts (hook, caption, hashtags)
 4. A short report to the orchestrator: slug, brand, niche, preview URL, what you iterated
 
 If any of those are missing, the renderer can't run.
@@ -24,7 +24,7 @@ If any of those are missing, the renderer can't run.
 
 ### 1. Invent the next design
 
-Look at what's already in `data/sites/` (run `ls data/sites/`). Skip
+Look at what's already in `data/site-previews/` (run `ls data/site-previews/`). Skip
 `-before` folders. Those are the slugs you've built before.
 
 Now think up the next one yourself. Vary the vibe from what came before:
@@ -78,7 +78,7 @@ weak, accept it and move on — the orchestrator will refresh next time.
 
 ### 5. Capture section screenshots
 
-Save into `data/sites/<slug>/`:
+Save into `data/site-previews/<slug>/`:
 
 ```
 00-fullpage.png     — the entire scrollable page as one tall PNG
@@ -146,7 +146,7 @@ Mix it up. The hooks should:
 For each, also write a 1-3 sentence caption and 3-5 hashtags
 (always include `#lovable`).
 
-Write the result as JSON to `data/sites/<slug>/content.json`:
+Write the result as JSON to `data/site-previews/<slug>/content.json`:
 
 ```json
 {

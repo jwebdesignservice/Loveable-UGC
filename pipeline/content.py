@@ -39,7 +39,7 @@ CONTENT_JSON_SCHEMA = """The orchestrator should write a file like:
   ]
 }
 
-Save it as data/sites/<slug>/content.json. The pipeline's render-batch
+Save it as data/site-previews/<slug>/content.json. The pipeline's render-batch
 command reads it and renders every carousel in the array.
 """
 

@@ -26,18 +26,18 @@ that order.
 If `actions[].kind == "build_site"` appears:
 
 Launch the **site-builder** subagent. It will:
-- Invent a fresh niche + brand (varying the vibe from what's already in `data/sites/`)
+- Invent a fresh niche + brand (varying the vibe from what's already in `data/site-previews/`)
 - Call `pipeline next-prompt` to get the templated Lovable prompt
 - Call `mcp__lovable__create_project` with that prompt
 - Iterate once if the build is weak
-- Capture 4 section screenshots into `data/sites/<slug>/`
+- Capture 4 section screenshots into `data/site-previews/<slug>/`
 - Generate a dated BEFORE site for revamp carousels
-- Write `data/sites/<slug>/content.json` with 4 carousel scripts
+- Write `data/site-previews/<slug>/content.json` with 4 carousel scripts
 - Report back
 
 When site-builder returns, verify:
-- `data/sites/<slug>/01-hero.png` (and 02-04) exist
-- `data/sites/<slug>/content.json` exists and has 4+ carousels
+- `data/site-previews/<slug>/01-hero.png` (and 02-04) exist
+- `data/site-previews/<slug>/content.json` exists and has 4+ carousels
 
 If site-builder reports the Lovable MCP isn't available, **stop the run**
 and tell the user: *"Lovable connector isn't loaded in this Claude Code
@@ -53,7 +53,7 @@ have a `content.json` but no carousels yet):
 python -m pipeline render-batch --site <slug>
 ```
 
-This reads `data/sites/<slug>/content.json` and renders every carousel
+This reads `data/site-previews/<slug>/content.json` and renders every carousel
 listed at both 1080x1920 and 1080x1080. If a `<slug>-before` folder
 exists, it also renders a comparison revamp carousel.
 

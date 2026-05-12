@@ -77,8 +77,8 @@ e.g. `C:\Users\Jack\AppData\Local\Programs\claude-code\claude.exe`.)
 | --- | --- |
 | `data/state.json` | Designs (Lovable builds) + carousels produced + posted flags |
 | `data/last-advisor-review.json` | Most recent advisor verdicts (APPROVE / REJECT / RETRY) |
-| `data/sites/<slug>/` | Real screenshots from Lovable for each design |
-| `data/sites/<slug>-before/` | Generated dated BEFORE site for revamp carousels |
+| `data/site-previews/<slug>/` | Real screenshots from Lovable for each design |
+| `data/site-previews/<slug>-before/` | Generated dated BEFORE site for revamp carousels |
 | `data/carousels/<slug>-NN-<pillar>/` | Rendered slide PNGs per carousel |
 
 ## Adding a new agent later

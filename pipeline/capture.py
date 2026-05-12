@@ -1,6 +1,6 @@
 """Real screenshot capture from Lovable preview URLs via Playwright.
 
-Writes into ``data/sites/<slug>/``:
+Writes into ``data/site-previews/<slug>/``:
 
     00-fullpage.png       the entire scrollable page as one tall PNG
     01-hero.png           the hero section alone (first detected section)
