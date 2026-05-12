@@ -25,7 +25,8 @@ VIEWPORT_W = 1080
 VIEWPORT_H = 1920
 NAV_TIMEOUT_MS = 60_000
 VIEWPORT_SCREENSHOT_TIMEOUT_MS = 30_000
-SETTLE_AFTER_LOAD_S = 2.0
+FULLPAGE_SCREENSHOT_TIMEOUT_MS = 120_000
+SETTLE_AFTER_LOAD_S = 2.5
 SCROLL_DWELL_S = 0.8
 PRE_SCROLL_DWELL_S = 0.6
 TARGET_CHUNK_SIZE = 3
@@ -37,6 +38,59 @@ TARGET_CHUNK_SIZE = 3
 # the resulting crops show actual content, not blank runway. One viewport
 # is what the section is intended to look like for a first-time visitor.
 MAX_SECTION_RUN_PX = VIEWPORT_H
+
+# Runs before any page script. Overrides IntersectionObserver so any
+# library that hides elements until they "enter the viewport"
+# (framer-motion whileInView, GSAP ScrollTrigger, AOS, etc.) instantly
+# treats every observed element as visible — meaning the page renders
+# in its final state at first paint, no scrolling required.
+_REVEAL_EVERYTHING_INIT_SCRIPT = r"""
+(() => {
+  const OriginalIO = window.IntersectionObserver;
+  function buildEntry(target) {
+    const rect = target.getBoundingClientRect
+      ? target.getBoundingClientRect()
+      : {top:0,left:0,bottom:0,right:0,width:0,height:0,x:0,y:0};
+    return {
+      isIntersecting: true,
+      intersectionRatio: 1,
+      target: target,
+      boundingClientRect: rect,
+      intersectionRect: rect,
+      rootBounds: {
+        x: 0, y: 0,
+        top: 0, left: 0,
+        width: window.innerWidth,
+        height: window.innerHeight,
+        bottom: window.innerHeight,
+        right: window.innerWidth,
+      },
+      time: performance.now(),
+    };
+  }
+  class InstantIntersectionObserver {
+    constructor(callback) {
+      this._cb = callback;
+      this._targets = new Set();
+    }
+    observe(target) {
+      this._targets.add(target);
+      const cb = this._cb;
+      setTimeout(() => {
+        try { cb([buildEntry(target)], this); } catch (e) {}
+      }, 0);
+    }
+    unobserve(target) { this._targets.delete(target); }
+    disconnect() { this._targets.clear(); }
+    takeRecords() { return []; }
+    get root() { return null; }
+    get rootMargin() { return "0px"; }
+    get thresholds() { return [0]; }
+  }
+  window.IntersectionObserver = InstantIntersectionObserver;
+  window.__OriginalIntersectionObserver__ = OriginalIO;
+})();
+"""
 
 
 def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
@@ -60,11 +114,20 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+        # reduced_motion: "reduce" advertises the prefers-reduced-motion
+        # media query to the page. Well-built sites (framer-motion respects
+        # it natively, most modern Lovable templates check for it) render
+        # everything in its final state instead of animating in.
         context = browser.new_context(
             viewport={"width": VIEWPORT_W, "height": VIEWPORT_H},
             device_scale_factor=2,
+            reduced_motion="reduce",
         )
         page = context.new_page()
+        # Belt-and-braces: also force-fire IntersectionObserver for any
+        # site that ignores prefers-reduced-motion. Must run BEFORE the
+        # page's own scripts, which is what add_init_script guarantees.
+        page.add_init_script(_REVEAL_EVERYTHING_INIT_SCRIPT)
         page.goto(preview_url, wait_until="domcontentloaded",
                   timeout=NAV_TIMEOUT_MS)
         try:
@@ -73,9 +136,8 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
             pass  # Lovable previews sometimes keep a socket open forever
         time.sleep(SETTLE_AFTER_LOAD_S)
 
-        # Soft-kill CSS animations/transitions so we don't get caught
-        # mid-transition. JS-driven reveal animations (framer-motion, GSAP)
-        # are still triggered naturally by the scroll loop below.
+        # Soft-kill CSS animations/transitions so a long fade isn't caught
+        # mid-frame in the screenshot.
         page.add_style_tag(content="""
             *, *::before, *::after {
                 animation-duration: 0s !important;
@@ -85,8 +147,7 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
             }
         """)
 
-        # Pre-scroll once to mount lazy content and fire IntersectionObserver
-        # callbacks (whileInView, ScrollTrigger, etc.) for every section.
+        # One pre-scroll pass to nudge any lazy-loaded media into mounting.
         page.evaluate(
             f"""async () => {{
                 const step = window.innerHeight;
@@ -96,25 +157,28 @@ def capture_site(preview_url: str, out_dir: Path) -> list[Path]:
                     await new Promise(r => setTimeout(
                         r, {int(PRE_SCROLL_DWELL_S * 1000)}));
                 }}
+                window.scrollTo({{top: 0, behavior: 'instant'}});
             }}"""
         )
         time.sleep(0.5)
 
         section_bounds = _detect_section_bounds(page)
-        scroll_height_css: int = page.evaluate(
-            "document.body.scrollHeight") or 0
         content_bottom_css: int = _detect_content_bottom(page)
-        # Stitch the whole scrollable area so scroll-scrub animations get
-        # captured wherever they land, then trim to the last bit of real
-        # content so the saved PNG isn't 95 % empty maroon.
-        effective_height_css = max(
-            content_bottom_css, VIEWPORT_H)
+        effective_height_css = max(content_bottom_css, VIEWPORT_H)
 
-        full_img = _stitched_fullpage_capture(page, scroll_height_css)
-        if effective_height_css * 2 < full_img.height:
-            full_img = full_img.crop(
-                (0, 0, full_img.width, effective_height_css * 2))
-        full_img.save(fullpage_path, optimize=True)
+        # Now that everything is forced visible, Playwright's built-in
+        # full_page screenshot is the simplest path. Resize the viewport
+        # to the effective content height so scroll-scrub runway space
+        # is excluded entirely.
+        page.set_viewport_size(
+            {"width": VIEWPORT_W, "height": effective_height_css})
+        time.sleep(0.4)
+        page.screenshot(
+            path=str(fullpage_path),
+            full_page=False,
+            animations="disabled",
+            timeout=FULLPAGE_SCREENSHOT_TIMEOUT_MS,
+        )
         browser.close()
 
     crops = _slice_fullpage(
