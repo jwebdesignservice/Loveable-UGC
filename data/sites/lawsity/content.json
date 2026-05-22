@@ -1,0 +1,35 @@
+{
+  "theme": {
+    "paper": [219, 213, 203],
+    "ink": [22, 20, 18],
+    "muted": [110, 100, 88],
+    "pill_bg": [22, 20, 18],
+    "pill_fg": [240, 230, 215]
+  },
+  "carousels": [
+    {
+      "pillar": "site-previews",
+      "hook": "i built a property brand in lovable in 2 days.",
+      "caption": "lawsity. one prompt got 90 percent of this. the listings grid alone is worth the swipe.",
+      "hashtags": ["#lovable", "#webdesign", "#realestate", "#buildinpublic"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "lovable made this from one prompt.",
+      "caption": "told it: luxury property brand, charcoal and brass, editorial typography. this came back.",
+      "hashtags": ["#lovable", "#aitools", "#realestatebrand", "#designinspo"]
+    },
+    {
+      "pillar": "site-previews",
+      "hook": "lovable just out-designed a $20k agency.",
+      "caption": "this whole site cost me nothing to build. lawsity is fake. the design is not.",
+      "hashtags": ["#lovable", "#webdesign", "#aitools"]
+    },
+    {
+      "pillar": "one-prompt-site",
+      "hook": "13 words. a full property brand.",
+      "caption": "no template. no figma. just one prompt and lovable did the rest.",
+      "hashtags": ["#lovable", "#vibecoding", "#design", "#realestate"]
+    }
+  ]
+}

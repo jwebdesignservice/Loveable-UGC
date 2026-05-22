@@ -96,6 +96,19 @@ def placeholders(site: str, brand: str) -> None:
         click.echo(f"  {p}")
 
 
+@cli.command("property-site")
+@click.option("--site", required=True)
+@click.option("--brand", required=True)
+def property_site(site: str, brand: str) -> None:
+    """Write a luxury-property placeholder site (charcoal/brass palette)."""
+    ensure_dirs()
+    out = SITES_DIR / site
+    paths = screenshots_mod.make_property_site(out, brand=brand)
+    click.echo(f"Wrote {len(paths)} property screenshots to {out}")
+    for p in paths:
+        click.echo(f"  {p}")
+
+
 @cli.command("ugly-site")
 @click.option("--site", required=True, help="Site slug under data/sites/")
 @click.option("--brand", required=True, help="Brand name to render.")
@@ -171,14 +184,17 @@ def render_batch(site: str, content_path: str | None) -> None:
             f"{content_mod.CONTENT_JSON_SCHEMA}"
         )
 
-    scripts = content_mod.load_from_json(path)
+    raw = json.loads(path.read_text())
+    scripts = [content_mod.CarouselScript(**c) for c in raw["carousels"]]
+    theme = raw.get("theme")
     state = state_mod.load()
 
     for i, s in enumerate(scripts, start=1):
         cname = f"{site}-{i:02d}-{s.pillar}"
         click.echo(f"[{i}/{len(scripts)}] {s.hook}")
         written = render_carousel(hook=s.hook, screenshots=shots,
-                                  out_dir=CAROUSELS_DIR / cname)
+                                  out_dir=CAROUSELS_DIR / cname,
+                                  theme=theme)
         click.echo(f"  -> {CAROUSELS_DIR / cname}")
         for ratio in written:
             click.echo(f"     {ratio}: {len(written[ratio])} slides")
@@ -200,6 +216,7 @@ def render_batch(site: str, content_path: str | None) -> None:
             hook=revamp_hook, before=before_shot,
             after_screenshots=shots,
             out_dir=CAROUSELS_DIR / cname,
+            theme=theme,
         )
         click.echo(f"  -> {CAROUSELS_DIR / cname}")
         state.carousels.append(state_mod.Carousel(

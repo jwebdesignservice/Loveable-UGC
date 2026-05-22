@@ -5,13 +5,40 @@ fastlaunchmvp template.
   slide 2..N : site screenshot centered on warm bg, no text
 
 Renders each carousel at 1080x1920 (9:16) and 1080x1080 (1:1).
+
+A `theme` dict can override the default paper / ink / pill colors so
+each design can have a slide background tuned to its own palette.
 """
 from __future__ import annotations
 from pathlib import Path
+from typing import Optional
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .config import (PAPER, INK, MUTED, PILL_BG, PILL_FG,
                      SIZE_9X16, SIZE_1X1, FONT_REG, FONT_BOLD)
+
+
+Color = tuple[int, int, int]
+Theme = dict
+
+
+def _rgb(value, fallback: Color) -> Color:
+    if value is None:
+        return fallback
+    if isinstance(value, (list, tuple)) and len(value) == 3:
+        return tuple(int(v) for v in value)
+    return fallback
+
+
+def _theme_colors(theme: Theme | None) -> tuple[Color, Color, Color, Color, Color]:
+    theme = theme or {}
+    return (
+        _rgb(theme.get("paper"), PAPER),
+        _rgb(theme.get("ink"), INK),
+        _rgb(theme.get("muted"), MUTED),
+        _rgb(theme.get("pill_bg"), PILL_BG),
+        _rgb(theme.get("pill_fg"), PILL_FG),
+    )
 
 
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
@@ -72,7 +99,9 @@ def _paste_centered(canvas: Image.Image, screenshot: Image.Image,
 
 
 def _draw_hook_pill(canvas: Image.Image, text: str, *,
-                    y_center: int, max_text_width: int) -> None:
+                    y_center: int, max_text_width: int,
+                    pill_bg: Color = PILL_BG,
+                    pill_fg: Color = PILL_FG) -> None:
     d = ImageDraw.Draw(canvas)
     W = canvas.size[0]
 
@@ -103,20 +132,22 @@ def _draw_hook_pill(canvas: Image.Image, text: str, *,
     pill_y = y_center - pill_h // 2
 
     d.rounded_rectangle((pill_x, pill_y, pill_x + pill_w, pill_y + pill_h),
-                        radius=int(pill_h * 0.18), fill=PILL_BG)
+                        radius=int(pill_h * 0.18), fill=pill_bg)
 
     ty = pill_y + pad_y
     for ln in lines:
         line_w = d.textbbox((0, 0), ln, font=fnt)[2]
         tx = pill_x + (pill_w - line_w) // 2
-        d.text((tx, ty), ln, font=fnt, fill=PILL_FG)
+        d.text((tx, ty), ln, font=fnt, fill=pill_fg)
         ty += line_h
 
 
 def render_slide(size: tuple[int, int], screenshot_path: Path,
-                 hook: str | None, slide_num: str | None) -> Image.Image:
+                 hook: str | None, slide_num: str | None,
+                 theme: Theme | None = None) -> Image.Image:
     W, H = size
-    canvas = Image.new("RGB", size, PAPER)
+    paper, ink, muted, pill_bg, pill_fg = _theme_colors(theme)
+    canvas = Image.new("RGB", size, paper)
 
     pad = int(W * 0.06)
 
@@ -135,24 +166,26 @@ def render_slide(size: tuple[int, int], screenshot_path: Path,
         d.rounded_rectangle(box, radius=22, fill=(220, 215, 205))
         d.text((box[0] + 30, box[1] + 30),
                f"(missing: {screenshot_path.name})",
-               font=_font(28), fill=MUTED)
+               font=_font(28), fill=muted)
 
     if hook:
         _draw_hook_pill(canvas, hook,
                         y_center=int(H * 0.16),
-                        max_text_width=int(W * 0.82))
+                        max_text_width=int(W * 0.82),
+                        pill_bg=pill_bg, pill_fg=pill_fg)
 
     if slide_num:
         d = ImageDraw.Draw(canvas)
         f = _font(int(W * 0.024))
         d.text((W - pad, H - pad // 2), slide_num,
-               font=f, fill=MUTED, anchor="rs")
+               font=f, fill=muted, anchor="rs")
 
     return canvas
 
 
 def render_carousel(*, hook: str, screenshots: list[Path], out_dir: Path,
-                    sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1)) -> dict:
+                    sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1),
+                    theme: Theme | None = None) -> dict:
     out_dir.mkdir(parents=True, exist_ok=True)
     total = len(screenshots)
     written: dict[str, list[str]] = {}
@@ -164,7 +197,7 @@ def render_carousel(*, hook: str, screenshots: list[Path], out_dir: Path,
         for i, shot in enumerate(screenshots, start=1):
             slide_hook = hook if i == 1 else None
             num = f"{i} / {total}"
-            img = render_slide((W, H), shot, slide_hook, num)
+            img = render_slide((W, H), shot, slide_hook, num, theme=theme)
             p = ratio_dir / f"slide-{i:02d}.png"
             img.save(p, optimize=True)
             paths.append(str(p))
@@ -200,14 +233,15 @@ def _draw_corner_tag(canvas: Image.Image, label: str, *,
 def render_comparison_slide(size: tuple[int, int], screenshot_path: Path,
                             tag: str | None, tag_color: str | None,
                             slide_num: str | None,
-                            hook: str | None) -> Image.Image:
+                            hook: str | None,
+                            theme: Theme | None = None) -> Image.Image:
     """A slide for BEFORE/AFTER style carousels.
 
     `tag` shows in the top-left as a small label. Hook (if given) sits in
     its usual pill at the top — only slide 1 of the carousel has it.
     """
     W, H = size
-    img = render_slide(size, screenshot_path, hook, slide_num)
+    img = render_slide(size, screenshot_path, hook, slide_num, theme=theme)
     if tag:
         palette = {
             "before": ((180, 35, 35), (255, 255, 255)),
@@ -222,7 +256,8 @@ def render_comparison_slide(size: tuple[int, int], screenshot_path: Path,
 def render_comparison_carousel(*, hook: str, before: Path,
                                after_screenshots: list[Path],
                                out_dir: Path,
-                               sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1)
+                               sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1),
+                               theme: Theme | None = None
                                ) -> dict:
     """3+ slide carousel: 1) hook + after hero, 2) BEFORE, 3..N) AFTER sections.
 
@@ -248,7 +283,7 @@ def render_comparison_carousel(*, hook: str, before: Path,
             slide_hook = hook if i == 1 else None
             num = f"{i} / {total}"
             img = render_comparison_slide((W, H), shot, tag, color, num,
-                                          slide_hook)
+                                          slide_hook, theme=theme)
             p = ratio_dir / f"slide-{i:02d}.png"
             img.save(p, optimize=True)
             paths.append(str(p))

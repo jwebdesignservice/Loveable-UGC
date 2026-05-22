@@ -254,6 +254,208 @@ def make_placeholder_site(out_dir: Path, brand: str = "Auréa") -> list[Path]:
     return paths
 
 
+# --------------------------------------------------- luxury property site
+
+
+def make_property_hero(path: Path, *, brand: str,
+                       headline: str = "Spaces, considered.",
+                       sub: str = "Curated residential listings across the city.") -> Path:
+    W, H = 1080, 1500
+    bg = Image.new("RGB", (W, H), (26, 24, 22))
+    d = ImageDraw.Draw(bg)
+
+    # top bar
+    d.text((60, 50), brand.upper(),
+           font=_font(28, bold=True), fill=(220, 200, 160))
+    nav = ["Listings", "Areas", "Services", "Contact"]
+    x = W - 60
+    for label in reversed(nav):
+        tw = d.textbbox((0, 0), label, font=_font(18))[2]
+        x -= tw + 28
+        d.text((x, 56), label, font=_font(18), fill=(200, 195, 185))
+
+    # massive headline
+    d.text((60, 240), headline,
+           font=_font(96, bold=True), fill=(240, 230, 215))
+    for i, line in enumerate(_wrap(sub, _font(24), W - 120, d)):
+        d.text((60, 360 + i * 34), line, font=_font(24), fill=(170, 160, 145))
+
+    # cta
+    btn_y = 470
+    btn_w, btn_h = 240, 64
+    d.rounded_rectangle((60, btn_y, 60 + btn_w, btn_y + btn_h),
+                        radius=6, fill=(220, 200, 160))
+    d.text((60 + btn_w // 2, btn_y + btn_h // 2), "View collection →",
+           font=_font(22, bold=True), fill=(26, 24, 22), anchor="mm")
+    d.text((320, btn_y + btn_h // 2 + 2), "Browse all areas",
+           font=_font(20), fill=(200, 195, 185), anchor="lm")
+
+    # building "photo" — gradient rectangle with subtle window grid
+    bx1, by1, bx2, by2 = 60, 640, W - 60, 1420
+    for y in range(by1, by2):
+        t = (y - by1) / (by2 - by1)
+        c = (int(60 - 40 * t), int(58 - 38 * t), int(54 - 36 * t))
+        d.line([(bx1, y), (bx2, y)], fill=c)
+    # window grid
+    cols = 7
+    rows = 12
+    for r in range(rows):
+        for c in range(cols):
+            wx = bx1 + 60 + c * ((bx2 - bx1 - 120) // cols)
+            wy = by1 + 80 + r * ((by2 - by1 - 160) // rows)
+            ww = ((bx2 - bx1 - 120) // cols) - 16
+            wh = ((by2 - by1 - 160) // rows) - 14
+            lit = (r + c) % 3 == 0
+            color = (220, 200, 160) if lit else (90, 86, 80)
+            d.rectangle((wx, wy, wx + ww, wy + wh), fill=color)
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_property_listings(path: Path, *, brand: str) -> Path:
+    W, H = 1080, 1500
+    bg = Image.new("RGB", (W, H), (32, 30, 28))
+    d = ImageDraw.Draw(bg)
+
+    d.text((60, 60), "FEATURED LISTINGS",
+           font=_font(18, bold=True), fill=(220, 200, 160))
+    d.text((60, 100), "Across central and waterfront districts.",
+           font=_font(28, bold=True), fill=(240, 230, 215))
+
+    listings = [
+        ("Notting Hill Townhouse", "4 bed · 3 bath · 2,400 sq ft", "£3.2M"),
+        ("Soho Loft", "2 bed · 2 bath · 1,420 sq ft", "£1.85M"),
+        ("Mayfair Penthouse", "3 bed · 2 bath · 1,980 sq ft", "£6.5M"),
+        ("Hampstead Garden", "5 bed · 4 bath · 3,650 sq ft", "£4.7M"),
+    ]
+    card_w = (W - 60 * 2 - 24) // 2
+    card_h = 460
+    for i, (title, specs, price) in enumerate(listings):
+        col = i % 2
+        row = i // 2
+        x = 60 + col * (card_w + 24)
+        y = 180 + row * (card_h + 28)
+        # photo area
+        for yy in range(y, y + card_h - 110):
+            t = (yy - y) / (card_h - 110)
+            c = (int(80 - 30 * t), int(76 - 28 * t), int(72 - 26 * t))
+            d.line([(x, yy), (x + card_w, yy)], fill=c)
+        # text
+        d.text((x + 14, y + card_h - 100), title,
+               font=_font(22, bold=True), fill=(240, 230, 215))
+        d.text((x + 14, y + card_h - 70), specs,
+               font=_font(16), fill=(170, 160, 145))
+        d.text((x + 14, y + card_h - 36), price,
+               font=_font(22, bold=True), fill=(220, 200, 160))
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_property_team(path: Path, *, brand: str) -> Path:
+    W, H = 1080, 1500
+    bg = Image.new("RGB", (W, H), (26, 24, 22))
+    d = ImageDraw.Draw(bg)
+
+    d.text((60, 60), "THE TEAM",
+           font=_font(18, bold=True), fill=(220, 200, 160))
+    d.text((60, 100), "Local advisors who actually live here.",
+           font=_font(28, bold=True), fill=(240, 230, 215))
+
+    team = [
+        ("Sasha Reeves", "Notting Hill · Holland Park"),
+        ("Mark Devereux", "Soho · Covent Garden"),
+        ("Imogen Park", "Mayfair · Marylebone"),
+        ("Daniel Khoury", "Hampstead · Belsize Park"),
+    ]
+    card_w = (W - 60 * 2 - 24) // 2
+    card_h = 480
+    for i, (name, area) in enumerate(team):
+        col = i % 2
+        row = i // 2
+        x = 60 + col * (card_w + 24)
+        y = 180 + row * (card_h + 28)
+        # portrait area
+        d.rectangle((x, y, x + card_w, y + card_h - 90),
+                    fill=(56, 52, 48))
+        # silhouette suggestion
+        cx = x + card_w // 2
+        cy = y + (card_h - 90) // 2
+        d.ellipse((cx - 70, cy - 90, cx + 70, cy + 50),
+                  fill=(110, 100, 88))
+        d.ellipse((cx - 110, cy + 30, cx + 110, cy + 220),
+                  fill=(110, 100, 88))
+        d.text((x + 14, y + card_h - 78), name,
+               font=_font(22, bold=True), fill=(240, 230, 215))
+        d.text((x + 14, y + card_h - 46), area,
+               font=_font(16), fill=(170, 160, 145))
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_property_footer(path: Path, *, brand: str) -> Path:
+    W, H = 1080, 1200
+    bg = Image.new("RGB", (W, H), (20, 18, 16))
+    d = ImageDraw.Draw(bg)
+
+    # massive CTA band
+    d.text((60, 120), "Ready to see something",
+           font=_font(48, bold=True), fill=(240, 230, 215))
+    d.text((60, 180), "you can't unsee?",
+           font=_font(48, bold=True), fill=(220, 200, 160))
+
+    btn_y = 320
+    btn_w, btn_h = 280, 70
+    d.rounded_rectangle((60, btn_y, 60 + btn_w, btn_y + btn_h),
+                        radius=6, fill=(220, 200, 160))
+    d.text((60 + btn_w // 2, btn_y + btn_h // 2), "Book a viewing",
+           font=_font(22, bold=True), fill=(20, 18, 16), anchor="mm")
+
+    # divider
+    d.line((60, 540, W - 60, 540), fill=(70, 64, 58), width=1)
+
+    d.text((60, 600), brand.upper(),
+           font=_font(28, bold=True), fill=(240, 230, 215))
+    d.text((60, 650), "hello@lawsity.com",
+           font=_font(18), fill=(170, 160, 145))
+    d.text((60, 678), "+44 20 0000 0000",
+           font=_font(18), fill=(170, 160, 145))
+    d.text((60, 706), "London · Mon-Sat 9-7",
+           font=_font(18), fill=(170, 160, 145))
+
+    cols = [
+        ("Browse", ["Listings", "Areas", "New developments"]),
+        ("Services", ["Buying", "Selling", "Lettings"]),
+        ("Company", ["About", "Press", "Careers"]),
+    ]
+    for i, (title, items) in enumerate(cols):
+        x = 60 + i * 320
+        y0 = 820
+        d.text((x, y0), title, font=_font(15, bold=True),
+               fill=(220, 200, 160))
+        for j, item in enumerate(items):
+            d.text((x, y0 + 32 + j * 28), item, font=_font(15),
+                   fill=(170, 160, 145))
+
+    d.text((60, 1140), f"© 2026 {brand}", font=_font(13),
+           fill=(110, 100, 88))
+
+    bg.save(path, optimize=True)
+    return path
+
+
+def make_property_site(out_dir: Path, *, brand: str) -> list[Path]:
+    out_dir.mkdir(parents=True, exist_ok=True)
+    return [
+        make_property_hero(out_dir / "01-hero.png", brand=brand),
+        make_property_listings(out_dir / "02-listings.png", brand=brand),
+        make_property_team(out_dir / "03-team.png", brand=brand),
+        make_property_footer(out_dir / "04-footer.png", brand=brand),
+    ]
+
+
 # ---------------------------------------------------------------- ugly sites
 
 
