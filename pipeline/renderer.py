@@ -236,6 +236,12 @@ def render_slide(size: tuple[int, int], screenshot_path: Path,
     return canvas
 
 
+RATIO_LABEL = {
+    f"{SIZE_9X16[0]}x{SIZE_9X16[1]}": "tiktok",
+    f"{SIZE_1X1[0]}x{SIZE_1X1[1]}": "instagram",
+}
+
+
 def render_carousel(*, hook: str, screenshots: list[Path], out_dir: Path,
                     sizes: tuple[tuple[int, int], ...] = (SIZE_9X16, SIZE_1X1),
                     theme: Theme | None = None) -> dict:
@@ -256,7 +262,24 @@ def render_carousel(*, hook: str, screenshots: list[Path], out_dir: Path,
             paths.append(str(p))
         written[f"{W}x{H}"] = paths
 
+    _package_zips(out_dir, sizes)
     return written
+
+
+def _package_zips(out_dir: Path,
+                  sizes: tuple[tuple[int, int], ...]) -> None:
+    """Bundle each rendered ratio into a single zip for easy phone download."""
+    import zipfile
+    for (W, H) in sizes:
+        key = f"{W}x{H}"
+        label = RATIO_LABEL.get(key, key)
+        ratio_dir = out_dir / key
+        if not ratio_dir.exists():
+            continue
+        zip_path = out_dir / f"{label}.zip"
+        with zipfile.ZipFile(zip_path, "w", zipfile.ZIP_DEFLATED) as zf:
+            for png in sorted(ratio_dir.glob("*.png")):
+                zf.write(png, png.name)
 
 
 # ---------------------------------------------------------- comparison render
@@ -341,4 +364,5 @@ def render_comparison_carousel(*, hook: str, before: Path,
             img.save(p, optimize=True)
             paths.append(str(p))
         written[f"{W}x{H}"] = paths
+    _package_zips(out_dir, sizes)
     return written

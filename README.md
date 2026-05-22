@@ -61,6 +61,31 @@ The orchestrator (`.claude/commands/go.md`) takes it from there.
 | `python -m pipeline render-comparison --before-site X-before --after-site X --hook "..." --carousel name` | Render one BEFORE/AFTER carousel |
 | `python -m pipeline demo` | Offline smoke test (stub content + placeholders) |
 
+## Saving carousels to your phone
+
+Every carousel folder now contains two ZIP files alongside the PNGs:
+
+```
+data/carousels/<name>/
+  1080x1920/            # individual TikTok slides
+  1080x1080/            # individual Instagram slides
+  tiktok.zip            # ← all 9:16 slides, one download
+  instagram.zip         # ← all 1:1 slides, one download
+```
+
+**On your phone:**
+
+1. Open the repo in your phone browser:
+   https://github.com/jwebdesignservice/loveable-ugc/tree/claude/add-powershell-setup-script-tN8lz/data/carousels
+2. Open the carousel folder you want (e.g. `vellum-01-site-previews`)
+3. Tap the ZIP for the platform you're posting to (`tiktok.zip` or `instagram.zip`)
+4. Tap **Download raw file** (top-right on GitHub)
+5. iOS: opens in Files app → tap to extract → save individual slides to Photos
+6. Android: opens in Files → extract → save to Gallery
+
+**Or** — long-press individual PNGs inside the `1080x1920/` or `1080x1080/` folder
+on the GitHub mobile site to save them one at a time.
+
 ## Layout
 
 ```
