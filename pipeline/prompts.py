@@ -180,20 +180,19 @@ Structure (high-converting)
 - FAQ accordion — at least 5 specific questions, no "What is X?" filler.
 - Footer with newsletter signup, structured navigation columns, social, secondary CTA repeat, and a copyright line.{extras and chr(10) + "- Also include:" + extras}
 
-Critical — animations (this site will be screen-recorded for short-form video)
-- Heavy emphasis on advanced, intentional scroll animations.
-- Hero text reveals on load with a staggered, slightly-delayed motion.
-- Parallax on the hero imagery.
-- Every major section fades + slides in as it enters the viewport, with a slight stagger between children.
-- Include at least one sticky scroll-scrub section that pins while the user scrolls and reveals content as they go.
-- Smooth scroll behavior throughout.
-- Subtle hover micro-interactions on every interactive element: links, buttons, cards, images. Hover state must be visible.
-- A horizontal-scroll section somewhere (logo wall, testimonials, lookbook, or work grid) that doubles as a scrub moment.
-- Animations are cinematic and intentional — the screen recording should look choreographed, not random.
+Critical — every section must work as a still screenshot
+- This site exists to be photographed. Each section is going to be cropped out and posted as a single carousel slide. Compose every section so it can stand alone as one image.
+- Strong, clear focal point per section. No competing focal points in one viewport.
+- Hierarchy reads instantly at thumbnail size: one dominant element, one supporting, then detail.
+- Typography is large enough to read at 50% zoom in a 1080-wide phone preview.
+- Negative space is part of the composition. Don't fill every pixel — leave breathing room around hero text and section headers.
+- No mid-scroll states needed; no loaders, no half-revealed elements. Every section presents itself fully when scrolled to.
+- No animations, transitions, parallax, or scroll effects. This site is a static visual reference, not a screen-recorded demo. Keep it clean and snappy — no motion, no scroll-triggered behaviour.
+- Hover states are fine but not essential.
 
 Build hygiene
 - Use modern, accessible markup. Mobile-first. No layout shift on load. Test the layout at 375px, 768px, 1280px, 1440px — nothing should overlap or clip at any of those.
 - Real copy throughout. NO lorem ipsum. NO generic SaaS phrases ("Build faster, ship better.", "Unlock your potential.", "The future of X.", "Welcome to {brand}", "Get started for free"). If copy starts to drift generic, rewrite it specific to {brand}'s actual offering.
 - Real-feeling placeholder content: named team members, real-sounding testimonials with companies and roles, plausible product/service names, specific numbers, specific cities.
-- One distinctive signature element this brand owns — a custom cursor, a recurring shape, a navigation pattern, a colour-block transition. Something memorable.{notes}
+- One distinctive signature element this brand owns — a recurring shape, a navigation pattern, a colour-block treatment, a section marker. Something memorable that appears in multiple sections and ties the brand together.{notes}
 """
