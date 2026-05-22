@@ -41,6 +41,48 @@ def _theme_colors(theme: Theme | None) -> tuple[Color, Color, Color, Color, Colo
     )
 
 
+def _draw_pattern(canvas: Image.Image, color: Color,
+                  kind: str = "dots", alpha: int = 22,
+                  spacing: int = 56) -> None:
+    """Lay a subtle minimal pattern on the slide background.
+
+    `kind` options:
+      - 'dots'  : faint dot grid (default)
+      - 'cross' : tiny plus marks on a grid
+      - 'grain' : low-density paper-grain noise
+      - 'none'  : no pattern
+    Pattern sits behind the screenshot — only visible in the negative space.
+    """
+    if kind == "none":
+        return
+    W, H = canvas.size
+    overlay = Image.new("RGBA", (W, H), (0, 0, 0, 0))
+    d = ImageDraw.Draw(overlay)
+    rgba = (*color, alpha)
+
+    if kind == "dots":
+        r = 1.5
+        for x in range(spacing, W, spacing):
+            for y in range(spacing, H, spacing):
+                d.ellipse((x - r, y - r, x + r, y + r), fill=rgba)
+    elif kind == "cross":
+        arm = 3
+        for x in range(spacing, W, spacing):
+            for y in range(spacing, H, spacing):
+                d.line((x - arm, y, x + arm, y), fill=rgba, width=1)
+                d.line((x, y - arm, x, y + arm), fill=rgba, width=1)
+    elif kind == "grain":
+        import random
+        random.seed(W * H)
+        for _ in range(W * H // 80):
+            x = random.randint(0, W - 1)
+            y = random.randint(0, H - 1)
+            a = random.randint(8, max(9, alpha))
+            d.point((x, y), fill=(*color, a))
+
+    canvas.paste(overlay, (0, 0), overlay)
+
+
 def _font(size: int, bold: bool = False) -> ImageFont.FreeTypeFont:
     return ImageFont.truetype(FONT_BOLD if bold else FONT_REG, size)
 
@@ -148,6 +190,17 @@ def render_slide(size: tuple[int, int], screenshot_path: Path,
     W, H = size
     paper, ink, muted, pill_bg, pill_fg = _theme_colors(theme)
     canvas = Image.new("RGB", size, paper)
+
+    # subtle background pattern (kind + alpha + spacing configurable via theme)
+    pattern_cfg = (theme or {}).get("pattern", {})
+    if isinstance(pattern_cfg, str):
+        pattern_cfg = {"kind": pattern_cfg}
+    _draw_pattern(
+        canvas, color=ink,
+        kind=pattern_cfg.get("kind", "dots"),
+        alpha=int(pattern_cfg.get("alpha", 22)),
+        spacing=int(pattern_cfg.get("spacing", 56)),
+    )
 
     pad = int(W * 0.06)
 

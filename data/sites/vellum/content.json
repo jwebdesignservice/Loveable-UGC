@@ -4,12 +4,17 @@
     "ink": [14, 26, 46],
     "muted": [130, 115, 90],
     "pill_bg": [14, 26, 46],
-    "pill_fg": [244, 235, 217]
+    "pill_fg": [244, 235, 217],
+    "pattern": {
+      "kind": "dots",
+      "alpha": 22,
+      "spacing": 56
+    }
   },
   "carousels": [
     {
       "pillar": "site-previews",
-      "hook": "built a private wealth brand in lovable.",
+      "hook": "",
       "caption": "vellum. midnight navy, cream, brass. archival serial numbers as section markers. lovable did the heavy lifting.",
       "hashtags": ["#lovable", "#webdesign", "#buildinpublic", "#brandidentity"]
     }
