@@ -1,2 +1,1 @@
-# Format: <slug> <url> (one per line). Workflow processes + clears this file on each push.
-vellum https://vellum-legacy-crafted.lovable.app/
+# entries are processed and removed by the workflow
