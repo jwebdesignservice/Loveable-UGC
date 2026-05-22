@@ -150,33 +150,50 @@ def build_prompt(niche: str, brand: str, *,
     return f"""Build me a super professional website for {spec.niche}. The brand is called {brand}.
 
 Tone & design
-- {spec.tone}. Think award-winning agency build, not a template.
-- Fully custom branding: cohesive palette ({spec.palette}); typography is {spec.typography}; generous whitespace; consistent voice across every section.
+- {spec.tone}. Think award-winning agency build (think Sites of the Day, Awwwards / Godly), not a Webflow template, not a SaaS landing page generator output.
+- Fully custom branding: cohesive palette ({spec.palette}); typography is {spec.typography}; consistent voice across every section.
 - High-quality imagery: {spec.imagery}
-- The whole site should feel like it costs $20K to commission, not $200.
+- The whole site should feel like a real $20K agency commission. No defaults, no obvious template moves.
+
+Layout & spacing — critical, do not skip
+- Use a real baseline grid: 8px increments for all spacing. Section padding should be at least 96px top and bottom on desktop, 64px on mobile. Never let a section feel cramped.
+- Elements MUST NOT overlap unless intentionally layered (e.g. an image bleeding behind text). No accidental overlapping cards, buttons, navs, or text blocks. No content clipping at any breakpoint.
+- Use a consistent max-width content container (1200-1280px) and centre it. No edge-to-edge text on desktop.
+- Hierarchy is enforced by spacing, weight, and scale — not by random colour changes. Each section has a clear primary, secondary, tertiary element.
+- Line-height: 1.5 for body copy, 1.1-1.2 for display headlines. Don't use the same line-height everywhere.
+- Buttons and form fields share a single height system (e.g. 48px / 56px). Don't mix heights randomly.
+- Cards in a grid must all be the same height. If content differs, pad to match — never let cards "jog" at different heights.
+
+Typography — be specific, not generic
+- Pair TWO fonts deliberately: {spec.typography}. Don't fall back to "Inter for everything" or "default system font". Pick real, distinctive faces.
+- Use the display face for h1 and h2 only. Use the body face for h3, h4, body, captions, buttons.
+- Type scale: display ~64-96px, h2 ~40-56px, h3 ~28-32px, body ~17-18px, caption ~13-14px. Tighter on mobile.
+- Numerals should be tabular when used in stats/pricing.
+- Avoid system font fallbacks visually — every text block should look intentional.
 
 Structure (high-converting)
-- Hero: massive headline, supporting subhead, one primary CTA, secondary text link. Imagery anchors the right side or fills behind.
-- Trust / social-proof band right under hero (logos, stat, or short testimonial line).
-- Three to four feature or benefit sections, each visually distinct — one alternating-image layout, one full-bleed feature, one card grid.
-- Testimonials section with at least three quotes and avatars.
-- Pricing or service tiers if appropriate for the niche.
-- FAQ with accordion behavior.
-- Footer with newsletter signup, navigation, social, and a final CTA repeat.{extras and chr(10) + "- Also include:" + extras}
+- Hero: a single, specific, in-brand headline (NOT "Build faster, ship better" or "The future of X"). Real subhead. One primary CTA, one secondary text link. Hero imagery anchored OR full-bleed behind — pick one and commit.
+- Trust / social-proof band right under hero: real-feeling logos, one specific stat ("£140M in property sold in 2025" not "10,000+ customers"), or a single short testimonial.
+- Three to four feature or benefit sections, EACH visually distinct: one alternating image+text, one full-bleed feature with overlapping text, one card grid. Do not repeat the same layout twice.
+- Testimonials with at least three quotes, named people, real-sounding companies, optional photo.
+- Pricing or service tiers (if the niche calls for it) with one tier visually featured.
+- FAQ accordion — at least 5 specific questions, no "What is X?" filler.
+- Footer with newsletter signup, structured navigation columns, social, secondary CTA repeat, and a copyright line.{extras and chr(10) + "- Also include:" + extras}
 
 Critical — animations (this site will be screen-recorded for short-form video)
 - Heavy emphasis on advanced, intentional scroll animations.
 - Hero text reveals on load with a staggered, slightly-delayed motion.
 - Parallax on the hero imagery.
 - Every major section fades + slides in as it enters the viewport, with a slight stagger between children.
-- Include at least one sticky scroll-scrub section that pins while the user scrolls and reveals content as they go (e.g. a feature with a 3-step explainer).
+- Include at least one sticky scroll-scrub section that pins while the user scrolls and reveals content as they go.
 - Smooth scroll behavior throughout.
-- Subtle hover micro-interactions on every interactive element: links, buttons, cards, images.
+- Subtle hover micro-interactions on every interactive element: links, buttons, cards, images. Hover state must be visible.
 - A horizontal-scroll section somewhere (logo wall, testimonials, lookbook, or work grid) that doubles as a scrub moment.
-- Every animation should feel cinematic and intentional — these screen recordings need to look impressive.
+- Animations are cinematic and intentional — the screen recording should look choreographed, not random.
 
 Build hygiene
-- Use modern, accessible markup. Mobile-first. No layout shift on load.
-- Keep copy real, specific, and in-brand — no lorem ipsum, no "Build faster. Ship better." filler.
-- Use real-feeling placeholder content (named team members, real-sounding testimonials, plausible product names).{notes}
+- Use modern, accessible markup. Mobile-first. No layout shift on load. Test the layout at 375px, 768px, 1280px, 1440px — nothing should overlap or clip at any of those.
+- Real copy throughout. NO lorem ipsum. NO generic SaaS phrases ("Build faster, ship better.", "Unlock your potential.", "The future of X.", "Welcome to {brand}", "Get started for free"). If copy starts to drift generic, rewrite it specific to {brand}'s actual offering.
+- Real-feeling placeholder content: named team members, real-sounding testimonials with companies and roles, plausible product/service names, specific numbers, specific cities.
+- One distinctive signature element this brand owns — a custom cursor, a recurring shape, a navigation pattern, a colour-block transition. Something memorable.{notes}
 """
